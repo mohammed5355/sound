@@ -83,6 +83,7 @@ struct ContentView: View {
                                 color: Color(hex: "2563EB"),
                                 onDecrease: { player.speed = max(0.5, player.speed - 0.01); player.applySpeed() },
                                 onIncrease: { player.speed = min(2.0, player.speed + 0.01); player.applySpeed() },
+                                onReset: { player.speed = 1.0; player.applySpeed() },
                                 sliderBinding: $player.speed,
                                 onSliderChange: { player.applySpeed() }
                             )
@@ -96,6 +97,7 @@ struct ContentView: View {
                                 color: Color(hex: "7c3aed"),
                                 onDecrease: { player.pitch = max(0.5, player.pitch - 0.01); player.applyPitch() },
                                 onIncrease: { player.pitch = min(2.0, player.pitch + 0.01); player.applyPitch() },
+                                onReset: { player.pitch = 1.0; player.applyPitch() },
                                 sliderBinding: $player.pitch,
                                 onSliderChange: { player.applyPitch() }
                             )
@@ -293,6 +295,7 @@ struct ControlRow: View {
     let color: Color
     let onDecrease: () -> Void
     let onIncrease: () -> Void
+    let onReset: () -> Void
     @Binding var sliderBinding: Double
     let onSliderChange: () -> Void
 
@@ -305,6 +308,11 @@ struct ControlRow: View {
                 Text(title)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(Color(hex: "475569"))
+                Button(action: { onReset(); haptic() }) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(hex: "94a3b8"))
+                }
                 Spacer()
                 Text(format(value))
                     .font(.system(.subheadline, design: .monospaced))

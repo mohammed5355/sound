@@ -81,8 +81,8 @@ struct ContentView: View {
                                 value: player.speed,
                                 format: { String(format: "%.2fx", $0) },
                                 color: Color(hex: "2563EB"),
-                                onDecrease: { player.speed = max(0.5, player.speed - 0.05); player.applySpeed() },
-                                onIncrease: { player.speed = min(2.0, player.speed + 0.05); player.applySpeed() },
+                                onDecrease: { player.speed = max(0.5, player.speed - 0.01); player.applySpeed() },
+                                onIncrease: { player.speed = min(2.0, player.speed + 0.01); player.applySpeed() },
                                 sliderBinding: $player.speed,
                                 onSliderChange: { player.applySpeed() }
                             )
@@ -94,8 +94,8 @@ struct ContentView: View {
                                 value: player.pitch,
                                 format: { String(format: "%.2fx", $0) },
                                 color: Color(hex: "7c3aed"),
-                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.05); player.applyPitch() },
-                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.05); player.applyPitch() },
+                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.01); player.applyPitch() },
+                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.01); player.applyPitch() },
                                 sliderBinding: $player.pitch,
                                 onSliderChange: { player.applyPitch() }
                             )
@@ -322,7 +322,7 @@ struct ControlRow: View {
                         .cornerRadius(8)
                 }
 
-                Slider(value: $sliderBinding, in: 0.5...2.0, step: 0.05)
+                Slider(value: $sliderBinding, in: 0.5...2.0, step: 0.01)
                     .accentColor(color)
                     .onChange(of: sliderBinding) { _, _ in onSliderChange() }
 

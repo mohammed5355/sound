@@ -9,257 +9,214 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    colors: [
-                        Color(hex: "f8f9ff"),
-                        Color(hex: "e8eaf6")
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Light background
+                Color(hex: "f5f7fa")
+                    .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 24) {
+                VStack(spacing: 0) {
 
-                        // MARK: - Title
+                    // MARK: - Header
+                    VStack(spacing: 16) {
                         Text("المشغل الذكي")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(hex: "6366f1"), Color(hex: "06b6d4")],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .padding(.top, 10)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(Color(hex: "1e293b"))
+                            .padding(.top, 20)
 
-                        // MARK: - File Picker Button
+                        // File Picker Button
                         Button(action: { player.showPicker = true }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "folder.badge.plus")
-                                    .font(.system(size: 20, weight: .semibold))
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.badge.plus")
+                                    .font(.system(size: 16, weight: .medium))
                                 Text("اختر ملف صوتي أو فيديو")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 15, weight: .medium))
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(hex: "6366f1"), Color(hex: "06b6d4")],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
                             .foregroundColor(.white)
-                            .cornerRadius(16)
-                            .shadow(color: Color(hex: "6366f1").opacity(0.3), radius: 8, x: 0, y: 4)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color(hex: "2563EB"))
+                            .cornerRadius(12)
                         }
 
                         if !player.fileName.isEmpty {
                             Text(player.fileName)
                                 .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(Color(hex: "6366f1"))
-                                .padding(.horizontal)
+                                .foregroundColor(Color(hex: "64748b"))
+                                .lineLimit(1)
                         }
-
-                        // MARK: - Play Button Section
-                        VStack(spacing: 20) {
-                            // Large Play Button
-                            Button(action: { player.togglePlay(); hapticFeedback() }) {
-                                ZStack {
-                                    // Glow shadow
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "6366f1"), Color(hex: "06b6d4")],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 100, height: 100)
-                                        .shadow(color: Color(hex: "6366f1").opacity(0.5), radius: 20, x: 0, y: 10)
-
-                                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                        .font(.system(size: 44))
-                                        .foregroundColor(.white)
-                                        .offset(x: player.isPlaying ? 0 : 4)
-                                }
-                            }
-
-                            // Skip Controls
-                            HStack(spacing: 50) {
-                                Button(action: { player.seek(-3); hapticFeedback() }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "gobackward")
-                                            .font(.system(size: 24, weight: .medium))
-                                        Text("3s")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    .foregroundColor(Color(hex: "6366f1"))
-                                    .padding()
-                                    .background(Color.white)
-                                    .cornerRadius(12)
-                                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                                }
-
-                                Button(action: { player.seek(3); hapticFeedback() }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "goforward")
-                                            .font(.system(size: 24, weight: .medium))
-                                        Text("3s")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    .foregroundColor(Color(hex: "6366f1"))
-                                    .padding()
-                                    .background(Color.white)
-                                    .cornerRadius(12)
-                                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 10)
-
-                        // MARK: - Progress Section
-                        VStack(spacing: 12) {
-                            HStack {
-                                Text(player.formatTime(player.currentTime))
-                                    .font(.system(.subheadline, design: .monospaced))
-                                    .foregroundColor(Color(hex: "6366f1"))
-                                Spacer()
-                                Text(player.formatTime(player.duration))
-                                    .font(.system(.subheadline, design: .monospaced))
-                                    .foregroundColor(Color(hex: "6366f1"))
-                            }
-
-                            // Custom Gradient Slider
-                            GeometryReader { geometry in
-                                ZStack(alignment: .leading) {
-                                    // Background track
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color.gray.opacity(0.2))
-                                        .frame(height: 8)
-
-                                    // Progress track with gradient
-                                    let progress = max(0, min(1, player.duration > 0 ? player.currentTime / player.duration : 0))
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "6366f1"), Color(hex: "06b6d4")],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        .frame(width: geometry.size.width * CGFloat(progress), height: 8)
-
-                                    // Thumb
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "6366f1"), Color(hex: "06b6d4")],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 20, height: 20)
-                                        .overlay(
-                                            Circle()
-                                                .fill(Color.white)
-                                                .frame(width: 8, height: 8)
-                                        )
-                                        .shadow(color: Color(hex: "6366f1").opacity(0.4), radius: 4, x: 0, y: 2)
-                                        .offset(x: geometry.size.width * CGFloat(progress) - 10)
-                                }
-                                .gesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { value in
-                                            let newTime = Double(value.location.x / geometry.size.width) * player.duration
-                                            player.currentTime = max(0, min(newTime, player.duration))
-                                        }
-                                        .onEnded { value in
-                                            let newTime = Double(value.location.x / geometry.size.width) * player.duration
-                                            player.seekTo(max(0, min(newTime, player.duration)))
-                                        }
-                                )
-                            }
-                            .frame(height: 20)
-                        }
-                        .padding(20)
-                        .background(Color.white)
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
-
-                        // MARK: - Speed Control
-                        ControlCard(
-                            title: "السرعة",
-                            value: player.speed,
-                            format: { String(format: "%.2fx", $0) },
-                            color: Color(hex: "6366f1"),
-                            onDecrease: { player.speed = max(0.5, player.speed - 0.01); player.applySpeed(); hapticFeedback() },
-                            onIncrease: { player.speed = min(2.0, player.speed + 0.01); player.applySpeed(); hapticFeedback() },
-                            onReset: { player.speed = 1.0; player.applySpeed(); hapticFeedback() },
-                            sliderBinding: $player.speed,
-                            onSliderChange: { player.applySpeed() }
-                        )
-
-                        // MARK: - Pitch Control
-                        ControlCard(
-                            title: "الطبقة",
-                            value: player.pitch,
-                            format: { String(format: "%.2fx", $0) },
-                            color: Color(hex: "8b5cf6"),
-                            onDecrease: { player.pitch = max(0.5, player.pitch - 0.01); player.applyPitch(); hapticFeedback() },
-                            onIncrease: { player.pitch = min(2.0, player.pitch + 0.01); player.applyPitch(); hapticFeedback() },
-                            onReset: { player.pitch = 1.0; player.applyPitch(); hapticFeedback() },
-                            sliderBinding: $player.pitch,
-                            onSliderChange: { player.applyPitch() }
-                        )
-
-                        // MARK: - A-B Loop Section
-                        VStack(spacing: 12) {
-                            Text("تحديد مقطع دقيق (A-B Loop)")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(Color(hex: "374151"))
-
-                            HStack(spacing: 12) {
-                                LoopButtonModern(
-                                    title: "بداية A",
-                                    time: player.loopA,
-                                    action: player.setA,
-                                    format: player.formatTime,
-                                    color: Color(hex: "6366f1")
-                                )
-
-                                LoopButtonModern(
-                                    title: "نهاية B",
-                                    time: player.loopB,
-                                    action: player.setB,
-                                    format: player.formatTime,
-                                    color: Color(hex: "06b6d4")
-                                )
-
-                                Button(action: { player.clearLoop(); hapticFeedback() }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "trash.fill")
-                                            .font(.system(size: 18, weight: .medium))
-                                        Text("مسح")
-                                            .font(.system(size: 11, weight: .medium))
-                                    }
-                                    .foregroundColor(.red)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(12)
-                                }
-                            }
-                        }
-                        .padding(20)
-                        .background(Color.white)
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
                     }
-                    .padding(20)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+
+                    ScrollView {
+                        VStack(spacing: 16) {
+
+                            // MARK: - Progress Section
+                            VStack(spacing: 16) {
+                                // Time Display
+                                HStack {
+                                    Text(player.formatTime(player.currentTime))
+                                        .font(.system(.subheadline, design: .monospaced))
+                                        .foregroundColor(Color(hex: "475569"))
+                                    Spacer()
+                                    Text(player.formatTime(player.duration))
+                                        .font(.system(.subheadline, design: .monospaced))
+                                        .foregroundColor(Color(hex: "475569"))
+                                }
+
+                                // Progress Slider
+                                ProgressSlider(
+                                    value: $player.currentTime,
+                                    duration: player.duration,
+                                    onSeek: { player.seekTo($0) }
+                                )
+                            }
+                            .padding(20)
+                            .background(Color.white)
+                            .cornerRadius(16)
+
+                            // MARK: - Speed Control
+                            ControlRow(
+                                icon: "speedometer",
+                                title: "السرعة",
+                                value: player.speed,
+                                format: { String(format: "%.2fx", $0) },
+                                color: Color(hex: "2563EB"),
+                                onDecrease: { player.speed = max(0.5, player.speed - 0.05); player.applySpeed() },
+                                onIncrease: { player.speed = min(2.0, player.speed + 0.05); player.applySpeed() },
+                                sliderBinding: $player.speed,
+                                onSliderChange: { player.applySpeed() }
+                            )
+
+                            // MARK: - Pitch Control
+                            ControlRow(
+                                icon: "waveform.path",
+                                title: "الطبقة",
+                                value: player.pitch,
+                                format: { String(format: "%.2fx", $0) },
+                                color: Color(hex: "7c3aed"),
+                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.05); player.applyPitch() },
+                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.05); player.applyPitch() },
+                                sliderBinding: $player.pitch,
+                                onSliderChange: { player.applyPitch() }
+                            )
+
+                            // MARK: - A-B Loop Section
+                            VStack(spacing: 16) {
+                                Text("تكرار المقطع (A-B)")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Color(hex: "334155"))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                HStack(spacing: 12) {
+                                    // Loop A Button
+                                    LoopPointButton(
+                                        label: "A",
+                                        time: player.loopA,
+                                        isActive: player.loopA != nil,
+                                        format: player.formatTime
+                                    ) {
+                                        player.setA()
+                                        hapticFeedback()
+                                    }
+
+                                    // Loop Toggle
+                                    VStack(spacing: 4) {
+                                        Button(action: {
+                                            if player.loopA != nil && player.loopB != nil {
+                                                player.loopEnabled.toggle()
+                                                hapticFeedback()
+                                            }
+                                        }) {
+                                            Image(systemName: player.loopEnabled ? "repeat.1" : "repeat")
+                                                .font(.system(size: 22, weight: .medium))
+                                                .foregroundColor(player.loopA != nil && player.loopB != nil ? Color(hex: "2563EB") : Color(hex: "cbd5e1"))
+                                                .frame(width: 50, height: 50)
+                                                .background(
+                                                    Circle()
+                                                        .fill(player.loopEnabled ? Color(hex: "2563EB").opacity(0.1) : Color(hex: "f1f5f9"))
+                                                )
+                                        }
+                                        Text(player.loopEnabled ? "تفعيل" : "إيقاف")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundColor(Color(hex: "94a3b8"))
+                                    }
+
+                                    // Loop B Button
+                                    LoopPointButton(
+                                        label: "B",
+                                        time: player.loopB,
+                                        isActive: player.loopB != nil,
+                                        format: player.formatTime
+                                    ) {
+                                        player.setB()
+                                        hapticFeedback()
+                                    }
+
+                                    // Clear Button
+                                    Button(action: {
+                                        player.clearLoop()
+                                        hapticFeedback()
+                                    }) {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(Color(hex: "94a3b8"))
+                                            .frame(width: 36, height: 36)
+                                            .background(Color(hex: "f1f5f9"))
+                                            .cornerRadius(10)
+                                    }
+                                }
+                            }
+                            .padding(20)
+                            .background(Color.white)
+                            .cornerRadius(16)
+
+                            // Extra spacing for bottom controls
+                            Color.clear.frame(height: 100)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
+                    }
+                }
+
+                // MARK: - Bottom Playback Controls
+                VStack {
+                    Spacer()
+                    HStack(spacing: 24) {
+                        // Backward Button
+                        Button(action: { player.seek(-3); hapticFeedback() }) {
+                            Image(systemName: "gobackward")
+                                .font(.system(size: 24))
+                                .foregroundColor(Color(hex: "475569"))
+                        }
+                        .frame(width: 56, height: 56)
+                        .background(Color.white)
+                        .cornerRadius(28)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+
+                        // Play/Pause Button
+                        Button(action: { player.togglePlay(); hapticFeedback() }) {
+                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.white)
+                                .offset(x: player.isPlaying ? 0 : 3)
+                        }
+                        .frame(width: 72, height: 72)
+                        .background(Color(hex: "2563EB"))
+                        .cornerRadius(36)
+                        .shadow(color: Color(hex: "2563EB").opacity(0.3), radius: 12, x: 0, y: 6)
+
+                        // Forward Button
+                        Button(action: { player.seek(3); hapticFeedback() }) {
+                            Image(systemName: "goforward")
+                                .font(.system(size: 24))
+                                .foregroundColor(Color(hex: "475569"))
+                        }
+                        .frame(width: 56, height: 56)
+                        .background(Color.white)
+                        .cornerRadius(28)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.bottom, 30)
                 }
             }
             .navigationBarHidden(true)
@@ -280,111 +237,160 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Control Card Component
-struct ControlCard: View {
+// MARK: - Progress Slider
+struct ProgressSlider: View {
+    @Binding var value: Double
+    let duration: Double
+    let onSeek: (Double) -> Void
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Track
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(hex: "e2e8f0"))
+                    .frame(height: 6)
+
+                // Progress
+                let progress = duration > 0 ? max(0, min(1, value / duration)) : 0
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(hex: "2563EB"))
+                    .frame(width: max(0, geometry.size.width * CGFloat(progress)), height: 6)
+
+                // Thumb
+                Circle()
+                    .fill(Color(hex: "2563EB"))
+                    .frame(width: 18, height: 18)
+                    .overlay(
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 6, height: 6)
+                    )
+                    .offset(x: geometry.size.width * CGFloat(progress) - 9)
+            }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { drag in
+                        let newValue = Double(drag.location.x / geometry.size.width) * duration
+                        value = max(0, min(newValue, duration))
+                    }
+                    .onEnded { drag in
+                        let newValue = Double(drag.location.x / geometry.size.width) * duration
+                        onSeek(max(0, min(newValue, duration)))
+                    }
+            )
+        }
+        .frame(height: 24)
+    }
+}
+
+// MARK: - Control Row
+struct ControlRow: View {
+    let icon: String
     let title: String
     let value: Double
     let format: (Double) -> String
     let color: Color
     let onDecrease: () -> Void
     let onIncrease: () -> Void
-    let onReset: () -> Void
     @Binding var sliderBinding: Double
     let onSliderChange: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("\(title): \(format(value))")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color(hex: "374151"))
-                Spacer()
-                Button(action: onReset) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(color)
-                        .padding(8)
-                        .background(color.opacity(0.1))
-                        .clipShape(Circle())
-                }
-            }
-
-            HStack(spacing: 16) {
-                Button(action: onDecrease) {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(color)
-                }
-
-                Slider(value: $sliderBinding, in: 0.5...2.0, step: 0.01)
-                    .accentColor(color)
-                    .onChange(of: sliderBinding) { _, _ in
-                        onSliderChange()
-                    }
-
-                Button(action: onIncrease) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(color)
-                }
-            }
-        }
-        .padding(20)
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
-    }
-}
-
-// MARK: - Modern Loop Button
-struct LoopButtonModern: View {
-    let title: String
-    let time: Double?
-    let action: () -> Void
-    let format: (Double) -> String
-    let color: Color
-
-    var body: some View {
-        Button(action: {
-            action()
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        }) {
-            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(color)
                 Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "6b7280"))
-                Text(time != nil ? format(time!) : "--:--.-")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(hex: "475569"))
+                Spacer()
+                Text(format(value))
                     .font(.system(.subheadline, design: .monospaced))
                     .fontWeight(.semibold)
                     .foregroundColor(color)
             }
+
+            HStack(spacing: 12) {
+                Button(action: { onDecrease(); haptic() }) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(color)
+                        .frame(width: 32, height: 32)
+                        .background(color.opacity(0.1))
+                        .cornerRadius(8)
+                }
+
+                Slider(value: $sliderBinding, in: 0.5...2.0, step: 0.05)
+                    .accentColor(color)
+                    .onChange(of: sliderBinding) { _, _ in onSliderChange() }
+
+                Button(action: { onIncrease(); haptic() }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(color)
+                        .frame(width: 32, height: 32)
+                        .background(color.opacity(0.1))
+                        .cornerRadius(8)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    func haptic() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+}
+
+// MARK: - Loop Point Button
+struct LoopPointButton: View {
+    let label: String
+    let time: Double?
+    let isActive: Bool
+    let format: (Double) -> String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Text(label)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(isActive ? .white : Color(hex: "2563EB"))
+                Text(time != nil ? format(time!) : "--:--.-")
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.medium)
+                    .foregroundColor(isActive ? .white : Color(hex: "64748b"))
+            }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(color.opacity(0.1))
+            .background(isActive ? Color(hex: "2563EB") : Color(hex: "f1f5f9"))
             .cornerRadius(12)
         }
     }
 }
 
-// MARK: - Color Extension for Hex
+// MARK: - Color Extension
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
+        let r, g, b: UInt64
         switch hex.count {
         case 6:
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+            (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
         default:
-            (a, r, g, b) = (255, 0, 0, 0)
+            (r, g, b) = (0, 0, 0)
         }
         self.init(
             .sRGB,
             red: Double(r) / 255,
             green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
+            blue: Double(b) / 255
         )
     }
 }
@@ -406,6 +412,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     @Published var showPicker = false
     @Published var loopA: Double? = nil
     @Published var loopB: Double? = nil
+    @Published var loopEnabled: Bool = true
 
     override init() {
         super.init()
@@ -438,6 +445,9 @@ class AudioPlayerManager: NSObject, ObservableObject {
             fileName = url.lastPathComponent
             duration = Double(audioFile!.length) / audioFile!.fileFormat.sampleRate
             currentTime = 0
+            loopA = nil
+            loopB = nil
+            loopEnabled = true
             scheduleFile()
             startTimer()
         } catch { print("File Load Error: \(error)") }
@@ -471,12 +481,34 @@ class AudioPlayerManager: NSObject, ObservableObject {
         currentTime = time
     }
 
-    func seek(_ seconds: Double) { seekTo(max(0, min(currentTime + seconds, duration))) }
-    func applySpeed() { pitchControl.rate = Float(speed) }
-    func applyPitch() { pitchControl.pitch = Float(log2(pitch) * 1200) }
-    func setA() { loopA = currentTime }
-    func setB() { loopB = currentTime }
-    func clearLoop() { loopA = nil; loopB = nil }
+    func seek(_ seconds: Double) {
+        seekTo(max(0, min(currentTime + seconds, duration)))
+    }
+
+    func applySpeed() {
+        pitchControl.rate = Float(speed)
+    }
+
+    func applyPitch() {
+        pitchControl.pitch = Float(log2(pitch) * 1200)
+    }
+
+    func setA() {
+        loopA = currentTime
+    }
+
+    func setB() {
+        if loopA != nil && currentTime > loopA! {
+            loopB = currentTime
+            loopEnabled = true
+        }
+    }
+
+    func clearLoop() {
+        loopA = nil
+        loopB = nil
+        loopEnabled = true
+    }
 
     private func startTimer() {
         timer?.invalidate()
@@ -484,13 +516,20 @@ class AudioPlayerManager: NSObject, ObservableObject {
             guard let self = self, self.isPlaying else { return }
             DispatchQueue.main.async {
                 self.currentTime = min(self.currentTime + (0.05 * self.speed), self.duration)
-                if let a = self.loopA, let b = self.loopB, self.currentTime >= b { self.seekTo(a) }
+                if self.loopEnabled,
+                   let a = self.loopA,
+                   let b = self.loopB,
+                   self.currentTime >= b {
+                    self.seekTo(a)
+                }
             }
         }
     }
 
     func formatTime(_ seconds: Double) -> String {
-        let m = Int(seconds) / 60, s = Int(seconds) % 60, dec = Int((seconds.truncatingRemainder(dividingBy: 1)) * 10)
+        let m = Int(seconds) / 60
+        let s = Int(seconds) % 60
+        let dec = Int((seconds.truncatingRemainder(dividingBy: 1)) * 10)
         return String(format: "%02d:%02d.%d", m, s, dec)
     }
 }

@@ -444,11 +444,10 @@ struct ProgressSlider: View {
     @Binding var value: Double
     let duration: Double
     let onSeek: (Double) -> Void
-    @Environment(\.layoutDirection) var layoutDirection
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading) {
+            ZStack(alignment: .leading) {
                 // Track
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color(hex: "e2e8f0"))
@@ -469,30 +468,24 @@ struct ProgressSlider: View {
                             .fill(Color.white)
                             .frame(width: 6, height: 6)
                     )
-                    .offset(x: (layoutDirection == .rightToLeft ? -1 : 1) * (geometry.size.width * CGFloat(progress) - 9))
+                    .offset(x: geometry.size.width * CGFloat(progress) - 9)
             }
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { drag in
-                        let normalizedX = normalizeDragX(drag.location.x, width: geometry.size.width)
-                        let newValue = Double(normalizedX) * duration
+                        let newValue = Double(drag.location.x / geometry.size.width) * duration
                         value = max(0, min(newValue, duration))
                     }
                     .onEnded { drag in
-                        let normalizedX = normalizeDragX(drag.location.x, width: geometry.size.width)
-                        let newValue = Double(normalizedX) * duration
+                        let newValue = Double(drag.location.x / geometry.size.width) * duration
                         onSeek(max(0, min(newValue, duration)))
                     }
             )
         }
         .frame(height: 24)
-    }
-
-    // Normalize drag X coordinate to 0-1 range, accounting for RTL
-    private func normalizeDragX(_ x: CGFloat, width: CGFloat) -> CGFloat {
-        let clamped = max(0, min(x, width))
-        return layoutDirection == .rightToLeft ? 1 - (clamped / width) : (clamped / width)
+        .environment(\.layoutDirection, .leftToRight)
+        .scaleEffect(x: -1)
     }
 }
 

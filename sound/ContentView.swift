@@ -3,8 +3,99 @@ import Combine
 import AVFoundation
 import UniformTypeIdentifiers
 
+// MARK: - Library Track Model
+struct LibraryTrack: Identifiable, Codable {
+    let id: UUID
+    let name: String
+    let duration: Double
+    let dateAdded: Date
+    let bookmarkData: Data?
+
+    init(id: UUID = UUID(), name: String, duration: Double, url: URL) {
+        self.id = id
+        self.name = name
+        self.duration = duration
+        self.dateAdded = Date()
+        self.bookmarkData = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+    }
+
+    func getURL() -> URL? {
+        guard let data = bookmarkData else { return nil }
+        var isStale = false
+        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale) else { return nil }
+        return url
+    }
+}
+
+// MARK: - Library Manager
+class LibraryManager: ObservableObject {
+    static let shared = LibraryManager()
+    private let key = "savedLibrary"
+
+    @Published var tracks: [LibraryTrack] = []
+
+    private init() {
+        load()
+    }
+
+    func addTrack(name: String, duration: Double, url: URL) {
+        // Check if already exists
+        if tracks.contains(where: { $0.name == name }) { return }
+        let track = LibraryTrack(name: name, duration: duration, url: url)
+        tracks.insert(track, at: 0)
+        save()
+    }
+
+    func deleteTrack(at offsets: IndexSet) {
+        tracks.remove(atOffsets: offsets)
+        save()
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(tracks) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    private func load() {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let decoded = try? JSONDecoder().decode([LibraryTrack].self, from: data) else { return }
+        tracks = decoded
+    }
+}
+
+// MARK: - Content View
 struct ContentView: View {
     @StateObject private var player = AudioPlayerManager()
+    @StateObject private var library = LibraryManager.shared
+    @State private var selectedTab = 0
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            // Tab 1: Player
+            PlayerView(player: player, library: library)
+                .tabItem {
+                    Image(systemName: "play.fill")
+                    Text("المشغل")
+                }
+                .tag(0)
+
+            // Tab 2: Library
+            LibraryView(player: player, library: library, selectedTab: $selectedTab)
+                .tabItem {
+                    Image(systemName: "music.note.list")
+                    Text("المكتبة")
+                }
+                .tag(1)
+        }
+        .environment(\.layoutDirection, .rightToLeft)
+    }
+}
+
+// MARK: - Player View
+struct PlayerView: View {
+    @ObservedObject var player: AudioPlayerManager
+    @ObservedObject var library: LibraryManager
 
     var body: some View {
         NavigationView {
@@ -222,11 +313,10 @@ struct ContentView: View {
                 }
             }
             .navigationBarHidden(true)
-            .environment(\.layoutDirection, .rightToLeft)
             .fileImporter(isPresented: $player.showPicker, allowedContentTypes: [UTType.audio, UTType.movie]) { result in
                 switch result {
                 case .success(let url):
-                    player.loadFile(url: url)
+                    player.loadFile(url: url, library: library)
                 case .failure(let error):
                     print("فشل اختيار الملف: \(error.localizedDescription)")
                 }
@@ -236,6 +326,111 @@ struct ContentView: View {
 
     func hapticFeedback() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+}
+
+// MARK: - Library View
+struct LibraryView: View {
+    @ObservedObject var player: AudioPlayerManager
+    @ObservedObject var library: LibraryManager
+    @Binding var selectedTab: Int
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color(hex: "f5f7fa")
+                    .ignoresSafeArea()
+
+                if library.tracks.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 48))
+                            .foregroundColor(Color(hex: "cbd5e1"))
+                        Text("لا توجد ملفات في المكتبة")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "94a3b8"))
+                        Text("اختر ملفاً صوتياً لإضافته")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "cbd5e1"))
+                    }
+                } else {
+                    List {
+                        ForEach(library.tracks) { track in
+                            LibraryTrackRow(track: track, formatTime: player.formatTime) {
+                                guard let url = track.getURL() else { return }
+                                player.loadFile(url: url, library: library)
+                                selectedTab = 0
+                            }
+                        }
+                        .onDelete { offsets in
+                            library.deleteTrack(at: offsets)
+                            hapticFeedback()
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("المكتبة")
+            .navigationBarTitleDisplayMode(.large)
+        }
+    }
+
+    func hapticFeedback() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+}
+
+// MARK: - Library Track Row
+struct LibraryTrackRow: View {
+    let track: LibraryTrack
+    let formatTime: (Double) -> String
+    let onPlay: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Play Button
+            Button(action: onPlay) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(Color(hex: "2563EB"))
+                    .cornerRadius(20)
+            }
+
+            // Track Info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(track.name)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(Color(hex: "1e293b"))
+                    .lineLimit(1)
+
+                HStack(spacing: 8) {
+                    Text(formatTime(track.duration))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(Color(hex: "64748b"))
+
+                    Text("•")
+                        .foregroundColor(Color(hex: "cbd5e1"))
+
+                    Text(formatDate(track.dateAdded))
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "94a3b8"))
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onPlay)
+    }
+
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ar_SA")
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: date)
     }
 }
 
@@ -445,7 +640,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         engine.connect(pitchControl, to: engine.mainMixerNode, format: nil)
     }
 
-    func loadFile(url: URL) {
+    func loadFile(url: URL, library: LibraryManager? = nil) {
         let shouldStopAccessing = url.startAccessingSecurityScopedResource()
         defer { if shouldStopAccessing { url.stopAccessingSecurityScopedResource() } }
 
@@ -460,6 +655,9 @@ class AudioPlayerManager: NSObject, ObservableObject {
             loopEnabled = true
             scheduleFile()
             startTimer()
+
+            // Save to library
+            library?.addTrack(name: fileName, duration: duration, url: url)
         } catch { print("File Load Error: \(error)") }
     }
 

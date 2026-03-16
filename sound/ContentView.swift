@@ -11,16 +11,54 @@ struct LibraryTrack: Identifiable, Codable {
     let dateAdded: Date
     let filePath: String
 
-    init(id: UUID = UUID(), name: String, duration: Double, url: URL) {
+    init(id: UUID = UUID(), name: String, duration: Double, filePath: String) {
         self.id = id
         self.name = name
         self.duration = duration
         self.dateAdded = Date()
-        self.filePath = url.path
+        self.filePath = filePath
     }
 
     func getURL() -> URL? {
         return URL(fileURLWithPath: filePath)
+    }
+}
+
+// MARK: - File Manager Helper
+class LibraryFileManager {
+    static let shared = LibraryFileManager()
+
+    private var documentsDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }
+
+    private var libraryDirectory: URL {
+        let libraryDir = documentsDirectory.appendingPathComponent("Library", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: libraryDir.path) {
+            try? FileManager.default.createDirectory(at: libraryDir, withIntermediateDirectories: true)
+        }
+        return libraryDir
+    }
+
+    func copyToLibrary(url: URL) -> URL? {
+        let destination = libraryDirectory.appendingPathComponent(url.lastPathComponent)
+
+        // If file already exists, return it
+        if FileManager.default.fileExists(atPath: destination.path) {
+            return destination
+        }
+
+        do {
+            try FileManager.default.copyItem(at: url, to: destination)
+            return destination
+        } catch {
+            print("Error copying file: \(error)")
+            return nil
+        }
+    }
+
+    func deleteFile(at path: String) {
+        try? FileManager.default.removeItem(atPath: path)
     }
 }
 
@@ -36,14 +74,25 @@ class LibraryManager: ObservableObject {
     }
 
     func addTrack(name: String, duration: Double, url: URL) {
-        // Check if already exists
+        // Check if already exists by name
         if tracks.contains(where: { $0.name == name }) { return }
-        let track = LibraryTrack(name: name, duration: duration, url: url)
+
+        // Copy file to app's library directory
+        guard let libraryURL = LibraryFileManager.shared.copyToLibrary(url: url) else {
+            print("Failed to copy file to library")
+            return
+        }
+
+        let track = LibraryTrack(name: name, duration: duration, filePath: libraryURL.path)
         tracks.insert(track, at: 0)
         save()
     }
 
     func deleteTrack(at offsets: IndexSet) {
+        for index in offsets {
+            let track = tracks[index]
+            LibraryFileManager.shared.deleteFile(at: track.filePath)
+        }
         tracks.remove(atOffsets: offsets)
         save()
     }
@@ -359,7 +408,7 @@ struct LibraryView: View {
                         ForEach(library.tracks) { track in
                             LibraryTrackRow(track: track, formatTime: player.formatTime) {
                                 guard let url = track.getURL() else { return }
-                                player.loadFile(url: url, library: library)
+                                player.loadFile(url: url, library: nil, saveToLibrary: false)
                                 selectedTab = 0
                             }
                         }
@@ -650,7 +699,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         engine.connect(pitchControl, to: engine.mainMixerNode, format: nil)
     }
 
-    func loadFile(url: URL, library: LibraryManager? = nil) {
+    func loadFile(url: URL, library: LibraryManager? = nil, saveToLibrary: Bool = true) {
         let shouldStopAccessing = url.startAccessingSecurityScopedResource()
 
         do {
@@ -665,8 +714,10 @@ class AudioPlayerManager: NSObject, ObservableObject {
             scheduleFile()
             startTimer()
 
-            // Save to library
-            library?.addTrack(name: fileName, duration: duration, url: url)
+            // Save to library (only for newly picked files)
+            if saveToLibrary {
+                library?.addTrack(name: fileName, duration: duration, url: url)
+            }
         } catch {
             print("File Load Error: \(error)")
         }

@@ -36,33 +36,54 @@ class LibraryFileManager {
         let libraryDir = documentsDirectory.appendingPathComponent("Library", isDirectory: true)
         if !FileManager.default.fileExists(atPath: libraryDir.path) {
             try? FileManager.default.createDirectory(at: libraryDir, withIntermediateDirectories: true)
+            // Exclude from iCloud backup
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            try? libraryDir.setResourceValues(resourceValues)
         }
         return libraryDir
     }
 
     func copyToLibrary(url: URL) -> URL? {
-        let destination = libraryDirectory.appendingPathComponent(url.lastPathComponent)
-        print("🔴 DEBUG: copyToLibrary - source: \(url.path)")
-        print("🔴 DEBUG: copyToLibrary - destination: \(destination.path)")
+        let fileName = UUID().uuidString + "_" + url.lastPathComponent
+        let destination = libraryDirectory.appendingPathComponent(fileName)
 
-        // If file already exists, return it
+        // If file already exists at destination, return it
         if FileManager.default.fileExists(atPath: destination.path) {
-            print("🔴 DEBUG: copyToLibrary - file already exists at destination")
             return destination
         }
 
         do {
+            // For iCloud files, ensure they're downloaded first
+            if url.isFileURL {
+                let resourceValues = try url.resourceValues(forKeys: [.isUbiquitousItemKey])
+                if resourceValues.isUbiquitousItem == true {
+                    // Trigger download from iCloud
+                    try FileManager.default.startDownloadingUbiquitousItem(at: url)
+                }
+            }
+
+            // Copy file to local storage
             try FileManager.default.copyItem(at: url, to: destination)
-            print("🔴 DEBUG: copyToLibrary - file copied successfully")
+
+            // Exclude from iCloud backup
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            try destination.setResourceValues(resourceValues)
+
             return destination
         } catch {
-            print("🔴 DEBUG: copyToLibrary - error copying file: \(error)")
+            print("Error copying file to library: \(error)")
             return nil
         }
     }
 
     func deleteFile(at path: String) {
         try? FileManager.default.removeItem(atPath: path)
+    }
+
+    func fileExists(at path: String) -> Bool {
+        return FileManager.default.fileExists(atPath: path)
     }
 }
 
@@ -411,13 +432,7 @@ struct LibraryView: View {
                     List {
                         ForEach(library.tracks) { track in
                             LibraryTrackRow(track: track, formatTime: player.formatTime) {
-                                print("🔴 DEBUG: Track tapped - \(track.name)")
-                                guard let url = track.getURL() else {
-                                    print("🔴 DEBUG: Failed to get URL from track")
-                                    return
-                                }
-                                print("🔴 DEBUG: URL = \(url.path)")
-                                print("🔴 DEBUG: File exists = \(FileManager.default.fileExists(atPath: url.path))")
+                                guard let url = track.getURL() else { return }
                                 player.loadFile(url: url, library: nil, saveToLibrary: false)
                                 selectedTab = 0
                             }
@@ -710,33 +725,26 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
 
     func loadFile(url: URL, library: LibraryManager? = nil, saveToLibrary: Bool = true) {
-        print("🔴 DEBUG: loadFile called with URL: \(url.path)")
         let shouldStopAccessing = url.startAccessingSecurityScopedResource()
-        print("🔴 DEBUG: shouldStopAccessing = \(shouldStopAccessing)")
 
         do {
             playerNode.stop()
-            print("🔴 DEBUG: Attempting to load audio file...")
             audioFile = try AVAudioFile(forReading: url)
-            print("🔴 DEBUG: Audio file loaded successfully")
             fileName = url.lastPathComponent
             duration = Double(audioFile!.length) / audioFile!.fileFormat.sampleRate
-            print("🔴 DEBUG: Duration = \(duration)s")
             currentTime = 0
             loopA = nil
             loopB = nil
             loopEnabled = true
             scheduleFile()
             startTimer()
-            print("🔴 DEBUG: File setup complete")
 
             // Save to library (only for newly picked files)
             if saveToLibrary {
                 library?.addTrack(name: fileName, duration: duration, url: url)
             }
         } catch {
-            print("🔴 DEBUG: File Load Error: \(error)")
-            print("🔴 DEBUG: Error localized: \(error.localizedDescription)")
+            print("File Load Error: \(error)")
         }
 
         if shouldStopAccessing {

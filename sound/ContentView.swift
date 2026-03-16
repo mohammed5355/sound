@@ -33,7 +33,7 @@ class LibraryFileManager {
     }
 
     private var libraryDirectory: URL {
-        let libraryDir = documentsDirectory.appendingPathComponent("Library", isDirectory: true)
+        var libraryDir = documentsDirectory.appendingPathComponent("Library", isDirectory: true)
         if !FileManager.default.fileExists(atPath: libraryDir.path) {
             try? FileManager.default.createDirectory(at: libraryDir, withIntermediateDirectories: true)
             // Exclude from iCloud backup
@@ -46,7 +46,7 @@ class LibraryFileManager {
 
     func copyToLibrary(url: URL) -> URL? {
         let fileName = UUID().uuidString + "_" + url.lastPathComponent
-        let destination = libraryDirectory.appendingPathComponent(fileName)
+        var destination = libraryDirectory.appendingPathComponent(fileName)
 
         // If file already exists at destination, return it
         if FileManager.default.fileExists(atPath: destination.path) {

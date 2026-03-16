@@ -283,7 +283,6 @@ struct ProgressSlider: View {
             )
         }
         .frame(height: 24)
-        .environment(\.layoutDirection, .leftToRight)
     }
 }
 

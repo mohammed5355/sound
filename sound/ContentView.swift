@@ -9,26 +9,18 @@ struct LibraryTrack: Identifiable, Codable {
     let name: String
     let duration: Double
     let dateAdded: Date
-    let bookmarkData: Data?
+    let filePath: String
 
     init(id: UUID = UUID(), name: String, duration: Double, url: URL) {
         self.id = id
         self.name = name
         self.duration = duration
         self.dateAdded = Date()
-        self.bookmarkData = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+        self.filePath = url.path
     }
 
     func getURL() -> URL? {
-        guard let data = bookmarkData else { return nil }
-        var isStale = false
-        do {
-            let url = try URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
-            return url
-        } catch {
-            print("Bookmark resolution error: \(error)")
-            return nil
-        }
+        return URL(fileURLWithPath: filePath)
     }
 }
 
@@ -317,7 +309,9 @@ struct PlayerView: View {
                     .padding(.bottom, 30)
                 }
             }
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
             .fileImporter(isPresented: $player.showPicker, allowedContentTypes: [UTType.audio, UTType.movie]) { result in
                 switch result {
                 case .success(let url):
@@ -330,7 +324,9 @@ struct PlayerView: View {
     }
 
     func hapticFeedback() {
+        #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
     }
 }
 
@@ -376,12 +372,16 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("المكتبة")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
+            #endif
         }
     }
 
     func hapticFeedback() {
+        #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
     }
 }
 
@@ -444,10 +444,11 @@ struct ProgressSlider: View {
     @Binding var value: Double
     let duration: Double
     let onSeek: (Double) -> Void
+    @Environment(\.layoutDirection) var layoutDirection
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .leading) {
+            ZStack(alignment: layoutDirection == .rightToLeft ? .trailing : .leading) {
                 // Track
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color(hex: "e2e8f0"))
@@ -468,23 +469,30 @@ struct ProgressSlider: View {
                             .fill(Color.white)
                             .frame(width: 6, height: 6)
                     )
-                    .offset(x: geometry.size.width * CGFloat(progress) - 9)
+                    .offset(x: (layoutDirection == .rightToLeft ? -1 : 1) * (geometry.size.width * CGFloat(progress) - 9))
             }
+            .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { drag in
-                        let newValue = Double(drag.location.x / geometry.size.width) * duration
+                        let normalizedX = normalizeDragX(drag.location.x, width: geometry.size.width)
+                        let newValue = Double(normalizedX) * duration
                         value = max(0, min(newValue, duration))
                     }
                     .onEnded { drag in
-                        let newValue = Double(drag.location.x / geometry.size.width) * duration
+                        let normalizedX = normalizeDragX(drag.location.x, width: geometry.size.width)
+                        let newValue = Double(normalizedX) * duration
                         onSeek(max(0, min(newValue, duration)))
                     }
             )
         }
         .frame(height: 24)
-        .environment(\.layoutDirection, .leftToRight)
-        .scaleEffect(x: -1)
+    }
+
+    // Normalize drag X coordinate to 0-1 range, accounting for RTL
+    private func normalizeDragX(_ x: CGFloat, width: CGFloat) -> CGFloat {
+        let clamped = max(0, min(x, width))
+        return layoutDirection == .rightToLeft ? 1 - (clamped / width) : (clamped / width)
     }
 }
 
@@ -552,7 +560,9 @@ struct ControlRow: View {
     }
 
     func haptic() {
+        #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
     }
 }
 
@@ -631,11 +641,13 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
 
     private func setupAudioSession() {
+        #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default)
             try session.setActive(true)
         } catch { print("Audio Session Error: \(error)") }
+        #endif
     }
 
     private func setupEngine() {

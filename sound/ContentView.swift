@@ -22,8 +22,13 @@ struct LibraryTrack: Identifiable, Codable {
     func getURL() -> URL? {
         guard let data = bookmarkData else { return nil }
         var isStale = false
-        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale) else { return nil }
-        return url
+        do {
+            let url = try URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
+            return url
+        } catch {
+            print("Bookmark resolution error: \(error)")
+            return nil
+        }
     }
 }
 
@@ -642,7 +647,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
 
     func loadFile(url: URL, library: LibraryManager? = nil) {
         let shouldStopAccessing = url.startAccessingSecurityScopedResource()
-        defer { if shouldStopAccessing { url.stopAccessingSecurityScopedResource() } }
 
         do {
             playerNode.stop()
@@ -658,7 +662,13 @@ class AudioPlayerManager: NSObject, ObservableObject {
 
             // Save to library
             library?.addTrack(name: fileName, duration: duration, url: url)
-        } catch { print("File Load Error: \(error)") }
+        } catch {
+            print("File Load Error: \(error)")
+        }
+
+        if shouldStopAccessing {
+            url.stopAccessingSecurityScopedResource()
+        }
     }
 
     private func scheduleFile() {

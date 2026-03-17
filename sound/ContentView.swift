@@ -433,7 +433,7 @@ struct LibraryView: View {
                         ForEach(library.tracks) { track in
                             LibraryTrackRow(track: track, formatTime: player.formatTime) {
                                 guard let url = track.getURL() else { return }
-                                player.loadFile(url: url, library: nil, saveToLibrary: false)
+                                player.loadFile(url: url, library: nil, saveToLibrary: false, displayName: track.name)
                                 selectedTab = 0
                             }
                         }
@@ -826,7 +826,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         engine.connect(pitchControl, to: engine.mainMixerNode, format: nil)
     }
 
-    func loadFile(url: URL, library: LibraryManager? = nil, saveToLibrary: Bool = true) {
+    func loadFile(url: URL, library: LibraryManager? = nil, saveToLibrary: Bool = true, displayName: String? = nil) {
         print("📋 loadFile called with URL: \(url.path)")
 
         // Start accessing security-scoped resource FIRST
@@ -890,7 +890,8 @@ class AudioPlayerManager: NSObject, ObservableObject {
         do {
             playerNode.stop()
             audioFile = try AVAudioFile(forReading: localURL)
-            fileName = localURL.lastPathComponent
+            // Use displayName if provided (for library tracks), otherwise use file name
+            fileName = displayName ?? localURL.lastPathComponent
             duration = Double(audioFile!.length) / audioFile!.fileFormat.sampleRate
             currentTime = 0
             loopA = nil

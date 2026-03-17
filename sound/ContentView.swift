@@ -98,19 +98,14 @@ class LibraryManager: ObservableObject {
         load()
     }
 
-    func addTrack(name: String, duration: Double, url: URL) {
+    func addTrackFromLocalFile(name: String, duration: Double, localPath: String) {
         // Check if already exists by name
         if tracks.contains(where: { $0.name == name }) { return }
 
-        // Copy file to app's library directory
-        guard let libraryURL = LibraryFileManager.shared.copyToLibrary(url: url) else {
-            print("Failed to copy file to library")
-            return
-        }
-
-        let track = LibraryTrack(name: name, duration: duration, filePath: libraryURL.path)
+        let track = LibraryTrack(name: name, duration: duration, filePath: localPath)
         tracks.insert(track, at: 0)
         save()
+        print("📋 Track added to library: \(name)")
     }
 
     func deleteTrack(at offsets: IndexSet) {
@@ -725,12 +720,51 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
 
     func loadFile(url: URL, library: LibraryManager? = nil, saveToLibrary: Bool = true) {
-        let shouldStopAccessing = url.startAccessingSecurityScopedResource()
+        print("📋 loadFile called with URL: \(url.path)")
 
+        // Start accessing security-scoped resource FIRST
+        let hasAccess = url.startAccessingSecurityScopedResource()
+        print("📋 Security scope access: \(hasAccess)")
+
+        var localURL: URL
+
+        if saveToLibrary {
+            // Copy file to local storage WHILE we have security access
+            print("📋 Copying file to local storage...")
+            guard let copiedURL = LibraryFileManager.shared.copyToLibrary(url: url) else {
+                print("📋 ERROR: Failed to copy file to library")
+                if hasAccess { url.stopAccessingSecurityScopedResource() }
+                return
+            }
+            print("📋 File copied to: \(copiedURL.path)")
+            localURL = copiedURL
+
+            // Stop accessing security-scoped resource AFTER copy
+            if hasAccess {
+                url.stopAccessingSecurityScopedResource()
+                print("📋 Stopped security scope access")
+            }
+
+            // Add to library with local path
+            let fileName = url.lastPathComponent
+            if !library!.tracks.contains(where: { $0.name == fileName }) {
+                // Get duration from local file
+                if let audioFile = try? AVAudioFile(forReading: localURL) {
+                    let duration = Double(audioFile.length) / audioFile.fileFormat.sampleRate
+                    library?.addTrackFromLocalFile(name: fileName, duration: duration, localPath: localURL.path)
+                }
+            }
+        } else {
+            // Loading from library - file is already local
+            localURL = url
+        }
+
+        // Now load the LOCAL file with AVAudioFile
+        print("📋 Loading local file: \(localURL.path)")
         do {
             playerNode.stop()
-            audioFile = try AVAudioFile(forReading: url)
-            fileName = url.lastPathComponent
+            audioFile = try AVAudioFile(forReading: localURL)
+            fileName = localURL.lastPathComponent
             duration = Double(audioFile!.length) / audioFile!.fileFormat.sampleRate
             currentTime = 0
             loopA = nil
@@ -738,17 +772,9 @@ class AudioPlayerManager: NSObject, ObservableObject {
             loopEnabled = true
             scheduleFile()
             startTimer()
-
-            // Save to library (only for newly picked files)
-            if saveToLibrary {
-                library?.addTrack(name: fileName, duration: duration, url: url)
-            }
+            print("📋 SUCCESS: File loaded, duration: \(duration)s")
         } catch {
-            print("File Load Error: \(error)")
-        }
-
-        if shouldStopAccessing {
-            url.stopAccessingSecurityScopedResource()
+            print("📋 ERROR loading audio file: \(error)")
         }
     }
 

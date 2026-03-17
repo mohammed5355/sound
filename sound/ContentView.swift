@@ -404,6 +404,9 @@ struct LibraryView: View {
     @ObservedObject var player: AudioPlayerManager
     @ObservedObject var library: LibraryManager
     @Binding var selectedTab: Int
+    @State private var showDeleteConfirmation = false
+    @State private var trackToDelete: LibraryTrack?
+    @State private var deleteOffsets: IndexSet?
 
     var body: some View {
         NavigationView {
@@ -433,8 +436,12 @@ struct LibraryView: View {
                             }
                         }
                         .onDelete { offsets in
-                            library.deleteTrack(at: offsets)
-                            hapticFeedback()
+                            // Store offsets and show confirmation
+                            deleteOffsets = offsets
+                            if let firstIndex = offsets.first {
+                                trackToDelete = library.tracks[firstIndex]
+                            }
+                            showDeleteConfirmation = true
                         }
                     }
                     .listStyle(.plain)
@@ -444,6 +451,26 @@ struct LibraryView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
             #endif
+            .alert("حذف المقطع", isPresented: $showDeleteConfirmation) {
+                Button("إلغاء", role: .cancel) {
+                    deleteOffsets = nil
+                    trackToDelete = nil
+                }
+                Button("حذف", role: .destructive) {
+                    if let offsets = deleteOffsets {
+                        library.deleteTrack(at: offsets)
+                        hapticFeedback()
+                    }
+                    deleteOffsets = nil
+                    trackToDelete = nil
+                }
+            } message: {
+                if let track = trackToDelete {
+                    Text("هل أنت متأكد من حذف \"\(track.name)\"؟\nسيتم حذف الملف من الجهاز.")
+                } else {
+                    Text("هل أنت متأكد من الحذف؟")
+                }
+            }
         }
     }
 

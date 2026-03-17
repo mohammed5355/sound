@@ -404,8 +404,11 @@ struct LibraryView: View {
     @State private var showDeleteConfirmation = false
     @State private var trackToDelete: LibraryTrack?
     @State private var deleteOffsets: IndexSet?
-    @State private var showPhotoPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showRenameAlert = false
+    @State private var pendingTrackName = ""
+    @State private var pendingTrackData: Data?
+    @State private var pendingTrackDuration: Double = 0
 
     var body: some View {
         NavigationView {
@@ -464,6 +467,19 @@ struct LibraryView: View {
                     }
                 }
             }
+            .alert("تسمية المقطع", isPresented: $showRenameAlert) {
+                TextField("اسم المقطع", text: $pendingTrackName)
+                Button("إلغاء", role: .cancel) {
+                    pendingTrackData = nil
+                    pendingTrackName = ""
+                    selectedPhotoItem = nil
+                }
+                Button("حفظ") {
+                    savePendingTrack()
+                }
+            } message: {
+                Text("أدخل اسماً للمقطع قبل حفظه في المكتبة")
+            }
             .alert("حذف المقطع", isPresented: $showDeleteConfirmation) {
                 Button("إلغاء", role: .cancel) {
                     deleteOffsets = nil
@@ -492,25 +508,49 @@ struct LibraryView: View {
             do {
                 // Load the video data
                 if let data = try await item.loadTransferable(type: Data.self) {
-                    // Get filename
-                    let fileName = item.itemIdentifier ?? "Unknown"
-                    let localPath = LibraryFileManager.shared.saveDataToLibrary(data: data, fileName: fileName)
+                    // Save to temp location to get duration
+                    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                    try data.write(to: tempURL)
 
-                    if let path = localPath {
-                        // Get duration
-                        let url = URL(fileURLWithPath: path)
-                        if let audioFile = try? AVAudioFile(forReading: url) {
-                            let duration = Double(audioFile.length) / audioFile.fileFormat.sampleRate
-                            await MainActor.run {
-                                library.addTrackFromLocalFile(name: fileName, duration: duration, localPath: path)
-                            }
-                        }
+                    // Get duration
+                    var duration: Double = 0
+                    if let audioFile = try? AVAudioFile(forReading: tempURL) {
+                        duration = Double(audioFile.length) / audioFile.fileFormat.sampleRate
+                    }
+
+                    // Clean up temp file
+                    try? FileManager.default.removeItem(at: tempURL)
+
+                    // Store pending data and show rename alert
+                    await MainActor.run {
+                        pendingTrackData = data
+                        pendingTrackDuration = duration
+                        pendingTrackName = item.itemIdentifier ?? "مقطع جديد"
+                        showRenameAlert = true
                     }
                 }
             } catch {
                 print("Error loading media: \(error)")
             }
         }
+    }
+
+    func savePendingTrack() {
+        guard let data = pendingTrackData else { return }
+
+        // Save data to library with the user's chosen name
+        let localPath = LibraryFileManager.shared.saveDataToLibrary(data: data, fileName: pendingTrackName)
+
+        if let path = localPath {
+            library.addTrackFromLocalFile(name: pendingTrackName, duration: pendingTrackDuration, localPath: path)
+            hapticFeedback()
+        }
+
+        // Clear pending state
+        pendingTrackData = nil
+        pendingTrackName = ""
+        pendingTrackDuration = 0
+        selectedPhotoItem = nil
     }
 
     func hapticFeedback() {

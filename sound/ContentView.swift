@@ -236,34 +236,6 @@ struct PlayerView: View {
                             .background(Color.white)
                             .cornerRadius(16)
 
-                            // MARK: - Speed Control
-                            ControlRow(
-                                icon: "speedometer",
-                                title: "السرعة",
-                                value: player.speed,
-                                format: { String(format: "%.2fx", $0) },
-                                color: Color(hex: "2563EB"),
-                                onDecrease: { player.speed = max(0.5, player.speed - 0.01); player.applySpeed() },
-                                onIncrease: { player.speed = min(2.0, player.speed + 0.01); player.applySpeed() },
-                                onReset: { player.speed = 1.0; player.applySpeed() },
-                                sliderBinding: $player.speed,
-                                onSliderChange: { player.applySpeed() }
-                            )
-
-                            // MARK: - Pitch Control
-                            ControlRow(
-                                icon: "waveform.path",
-                                title: "الطبقة",
-                                value: player.pitch,
-                                format: { String(format: "%.2fx", $0) },
-                                color: Color(hex: "7c3aed"),
-                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.01); player.applyPitch() },
-                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.01); player.applyPitch() },
-                                onReset: { player.pitch = 1.0; player.applyPitch() },
-                                sliderBinding: $player.pitch,
-                                onSliderChange: { player.applyPitch() }
-                            )
-
                             // MARK: - A-B Loop Section
                             VStack(spacing: 16) {
                                 Text("تكرار المقطع (A-B)")
@@ -334,6 +306,34 @@ struct PlayerView: View {
                             .background(Color.white)
                             .cornerRadius(16)
 
+                            // MARK: - Speed Control
+                            ControlRow(
+                                icon: "speedometer",
+                                title: "السرعة",
+                                value: player.speed,
+                                format: { String(format: "%.2fx", $0) },
+                                color: Color(hex: "2563EB"),
+                                onDecrease: { player.speed = max(0.5, player.speed - 0.01); player.applySpeed() },
+                                onIncrease: { player.speed = min(2.0, player.speed + 0.01); player.applySpeed() },
+                                onReset: { player.speed = 1.0; player.applySpeed() },
+                                sliderBinding: $player.speed,
+                                onSliderChange: { player.applySpeed() }
+                            )
+
+                            // MARK: - Pitch Control
+                            ControlRow(
+                                icon: "waveform.path",
+                                title: "الطبقة",
+                                value: player.pitch,
+                                format: { String(format: "%.2fx", $0) },
+                                color: Color(hex: "7c3aed"),
+                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.01); player.applyPitch() },
+                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.01); player.applyPitch() },
+                                onReset: { player.pitch = 1.0; player.applyPitch() },
+                                sliderBinding: $player.pitch,
+                                onSliderChange: { player.applyPitch() }
+                            )
+
                             // Extra spacing for bottom controls
                             Color.clear.frame(height: 100)
                         }
@@ -347,10 +347,16 @@ struct PlayerView: View {
                     Spacer()
                     HStack(spacing: 24) {
                         // Backward Button
-                        Button(action: { player.seek(-3); hapticFeedback() }) {
-                            Image(systemName: "gobackward")
-                                .font(.system(size: 24))
-                                .foregroundColor(Color(hex: "475569"))
+                        Button(action: { player.seek(-5); hapticFeedback() }) {
+                            ZStack {
+                                Image(systemName: "gobackward")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Color(hex: "475569"))
+                                Text("5")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(Color(hex: "475569"))
+                                    .offset(y: -12)
+                            }
                         }
                         .frame(width: 56, height: 56)
                         .background(Color.white)
@@ -370,10 +376,16 @@ struct PlayerView: View {
                         .shadow(color: Color(hex: "2563EB").opacity(0.3), radius: 12, x: 0, y: 6)
 
                         // Forward Button
-                        Button(action: { player.seek(3); hapticFeedback() }) {
-                            Image(systemName: "goforward")
-                                .font(.system(size: 24))
-                                .foregroundColor(Color(hex: "475569"))
+                        Button(action: { player.seek(5); hapticFeedback() }) {
+                            ZStack {
+                                Image(systemName: "goforward")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Color(hex: "475569"))
+                                Text("5")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(Color(hex: "475569"))
+                                    .offset(y: -12)
+                            }
                         }
                         .frame(width: 56, height: 56)
                         .background(Color.white)

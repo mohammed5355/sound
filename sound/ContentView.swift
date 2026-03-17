@@ -759,6 +759,25 @@ class AudioPlayerManager: NSObject, ObservableObject {
             localURL = url
         }
 
+        // Check if file is readable
+        let isReadable = FileManager.default.isReadableFile(atPath: localURL.path)
+        print("📋 File readable: \(isReadable)")
+
+        if !isReadable {
+            // Fix file permissions
+            print("📋 Fixing file permissions...")
+            do {
+                try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: localURL.path)
+                print("📋 Permissions fixed to 0o644")
+            } catch {
+                print("📋 ERROR fixing permissions: \(error)")
+            }
+        }
+
+        // Verify again after permission fix
+        let nowReadable = FileManager.default.isReadableFile(atPath: localURL.path)
+        print("📋 File readable after fix: \(nowReadable)")
+
         // Now load the LOCAL file with AVAudioFile
         print("📋 Loading local file: \(localURL.path)")
         do {

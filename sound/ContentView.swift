@@ -345,23 +345,19 @@ struct PlayerView: View {
                 // MARK: - Bottom Playback Controls
                 VStack {
                     Spacer()
-                    HStack(spacing: 24) {
+                    HStack(spacing: 0) {
                         // Backward Button
                         Button(action: { player.seek(-5); hapticFeedback() }) {
-                            ZStack {
-                                Image(systemName: "gobackward")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(Color(hex: "475569"))
-                                Text("5")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(Color(hex: "475569"))
-                                    .offset(y: -12)
-                            }
+                            Image(systemName: "gobackward.5")
+                                .font(.system(size: 28))
+                                .foregroundColor(Color(hex: "475569"))
                         }
                         .frame(width: 56, height: 56)
                         .background(Color.white)
                         .cornerRadius(28)
                         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+
+                        Spacer()
 
                         // Play/Pause Button
                         Button(action: { player.togglePlay(); hapticFeedback() }) {
@@ -375,17 +371,13 @@ struct PlayerView: View {
                         .cornerRadius(36)
                         .shadow(color: Color(hex: "2563EB").opacity(0.3), radius: 12, x: 0, y: 6)
 
+                        Spacer()
+
                         // Forward Button
                         Button(action: { player.seek(5); hapticFeedback() }) {
-                            ZStack {
-                                Image(systemName: "goforward")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(Color(hex: "475569"))
-                                Text("5")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(Color(hex: "475569"))
-                                    .offset(y: -12)
-                            }
+                            Image(systemName: "goforward.5")
+                                .font(.system(size: 28))
+                                .foregroundColor(Color(hex: "475569"))
                         }
                         .frame(width: 56, height: 56)
                         .background(Color.white)

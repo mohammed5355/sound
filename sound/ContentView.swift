@@ -345,7 +345,7 @@ struct PlayerView: View {
                 // MARK: - Bottom Playback Controls
                 VStack {
                     Spacer()
-                    HStack(spacing: 0) {
+                    HStack(spacing: 30) {
                         // Backward Button
                         Button(action: { player.seek(-5); hapticFeedback() }) {
                             Image(systemName: "gobackward.5")
@@ -356,8 +356,6 @@ struct PlayerView: View {
                         .background(Color.white)
                         .cornerRadius(28)
                         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
-
-                        Spacer()
 
                         // Play/Pause Button
                         Button(action: { player.togglePlay(); hapticFeedback() }) {
@@ -370,8 +368,6 @@ struct PlayerView: View {
                         .background(Color(hex: "2563EB"))
                         .cornerRadius(36)
                         .shadow(color: Color(hex: "2563EB").opacity(0.3), radius: 12, x: 0, y: 6)
-
-                        Spacer()
 
                         // Forward Button
                         Button(action: { player.seek(5); hapticFeedback() }) {

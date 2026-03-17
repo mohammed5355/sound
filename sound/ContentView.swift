@@ -609,7 +609,8 @@ struct LibraryTrackRow: View {
     func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ar_SA")
-        formatter.dateFormat = "d MMM"
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "d MMMM yyyy"
         return formatter.string(from: date)
     }
 }

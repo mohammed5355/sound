@@ -6,5 +6,7 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to import videos for audio playback.</string>
 </dict>
 </plist>

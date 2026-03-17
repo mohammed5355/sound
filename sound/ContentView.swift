@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 import AVFoundation
 import UniformTypeIdentifiers
+import PhotosUI
 
 // MARK: - Library Track Model
 struct LibraryTrack: Identifiable, Codable {
@@ -84,6 +85,25 @@ class LibraryFileManager {
 
     func fileExists(at path: String) -> Bool {
         return FileManager.default.fileExists(atPath: path)
+    }
+
+    func saveDataToLibrary(data: Data, fileName: String) -> String? {
+        let uniqueFileName = UUID().uuidString + "_" + fileName
+        var destination = libraryDirectory.appendingPathComponent(uniqueFileName)
+
+        do {
+            try data.write(to: destination)
+
+            // Exclude from iCloud backup
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            try destination.setResourceValues(resourceValues)
+
+            return destination.path
+        } catch {
+            print("Error saving data to library: \(error)")
+            return nil
+        }
     }
 }
 
@@ -178,21 +198,6 @@ struct PlayerView: View {
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(Color(hex: "1e293b"))
                             .padding(.top, 20)
-
-                        // File Picker Button
-                        Button(action: { player.showPicker = true }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "doc.badge.plus")
-                                    .font(.system(size: 16, weight: .medium))
-                                Text("اختر ملف صوتي أو فيديو")
-                                    .font(.system(size: 15, weight: .medium))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color(hex: "2563EB"))
-                            .cornerRadius(12)
-                        }
 
                         if !player.fileName.isEmpty {
                             Text(player.fileName)
@@ -381,14 +386,6 @@ struct PlayerView: View {
             #if os(iOS)
             .navigationBarHidden(true)
             #endif
-            .fileImporter(isPresented: $player.showPicker, allowedContentTypes: [UTType.audio, UTType.movie]) { result in
-                switch result {
-                case .success(let url):
-                    player.loadFile(url: url, library: library)
-                case .failure(let error):
-                    print("فشل اختيار الملف: \(error.localizedDescription)")
-                }
-            }
         }
     }
 
@@ -407,6 +404,8 @@ struct LibraryView: View {
     @State private var showDeleteConfirmation = false
     @State private var trackToDelete: LibraryTrack?
     @State private var deleteOffsets: IndexSet?
+    @State private var showPhotoPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         NavigationView {
@@ -422,7 +421,7 @@ struct LibraryView: View {
                         Text("لا توجد ملفات في المكتبة")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(Color(hex: "94a3b8"))
-                        Text("اختر ملفاً صوتياً لإضافته")
+                        Text("اضغط + لإضافة مقطع من الصور")
                             .font(.system(size: 14))
                             .foregroundColor(Color(hex: "cbd5e1"))
                     }
@@ -451,6 +450,20 @@ struct LibraryView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
             #endif
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .videos) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color(hex: "2563EB"))
+                    }
+                    .onChange(of: selectedPhotoItem) { _, newItem in
+                        if let newItem = newItem {
+                            loadMediaFromPhotos(item: newItem)
+                        }
+                    }
+                }
+            }
             .alert("حذف المقطع", isPresented: $showDeleteConfirmation) {
                 Button("إلغاء", role: .cancel) {
                     deleteOffsets = nil
@@ -470,6 +483,32 @@ struct LibraryView: View {
                 } else {
                     Text("هل أنت متأكد من الحذف؟")
                 }
+            }
+        }
+    }
+
+    func loadMediaFromPhotos(item: PhotosPickerItem) {
+        Task {
+            do {
+                // Load the video data
+                if let data = try await item.loadTransferable(type: Data.self) {
+                    // Get filename
+                    let fileName = item.itemIdentifier ?? "Unknown"
+                    let localPath = LibraryFileManager.shared.saveDataToLibrary(data: data, fileName: fileName)
+
+                    if let path = localPath {
+                        // Get duration
+                        let url = URL(fileURLWithPath: path)
+                        if let audioFile = try? AVAudioFile(forReading: url) {
+                            let duration = Double(audioFile.length) / audioFile.fileFormat.sampleRate
+                            await MainActor.run {
+                                library.addTrackFromLocalFile(name: fileName, duration: duration, localPath: path)
+                            }
+                        }
+                    }
+                }
+            } catch {
+                print("Error loading media: \(error)")
             }
         }
     }

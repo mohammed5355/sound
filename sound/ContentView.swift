@@ -977,6 +977,10 @@ class AudioPlayerManager: NSObject, ObservableObject {
             loopEnabled = true
             scheduleFile()
             startTimer()
+            // Auto-start playback after loading
+            if !engine.isRunning { try? engine.start() }
+            playerNode.play()
+            isPlaying = true
             print("📋 SUCCESS: File loaded, duration: \(duration)s")
         } catch {
             print("📋 ERROR loading audio file: \(error)")

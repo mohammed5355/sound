@@ -52,7 +52,7 @@ class LibraryFileManager {
 
     func copyToLibrary(url: URL) -> String? {
         let fileName = UUID().uuidString + "_" + url.lastPathComponent
-        let destination = libraryDirectory.appendingPathComponent(fileName)
+        var destination = libraryDirectory.appendingPathComponent(fileName)
 
         // If file already exists at destination, return the file name
         if FileManager.default.fileExists(atPath: destination.path) {
@@ -96,7 +96,7 @@ class LibraryFileManager {
 
     func saveDataToLibrary(data: Data, fileName: String) -> String? {
         let uniqueFileName = UUID().uuidString + "_" + fileName
-        let destination = libraryDirectory.appendingPathComponent(uniqueFileName)
+        var destination = libraryDirectory.appendingPathComponent(uniqueFileName)
 
         do {
             try data.write(to: destination)

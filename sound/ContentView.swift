@@ -982,6 +982,12 @@ class AudioPlayerManager: NSObject, ObservableObject {
             playerNode.pause()
             isPlaying = false
         } else {
+            // If at end of track, reset to beginning
+            if currentTime >= duration {
+                currentTime = 0
+                playerNode.stop()
+                scheduleFile()
+            }
             if !engine.isRunning { try? engine.start() }
             playerNode.play()
             isPlaying = true

@@ -981,16 +981,19 @@ class AudioPlayerManager: NSObject, ObservableObject {
         if isPlaying {
             playerNode.pause()
             isPlaying = false
-        } else {
-            // If at end of track, reset to beginning
+        } else if audioFile != nil {
             if currentTime >= duration {
-                currentTime = 0
                 playerNode.stop()
+                currentTime = 0
                 scheduleFile()
+                if !engine.isRunning { try? engine.start() }
+                playerNode.play()
+                isPlaying = true
+            } else {
+                if !engine.isRunning { try? engine.start() }
+                playerNode.play()
+                isPlaying = true
             }
-            if !engine.isRunning { try? engine.start() }
-            playerNode.play()
-            isPlaying = true
         }
     }
 

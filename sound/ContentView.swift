@@ -365,16 +365,16 @@ struct PlayerView: View {
                 // MARK: - Bottom Playback Controls
                 VStack {
                     Spacer()
-                    HStack(spacing: 30) {
+                    HStack(spacing: 24) {
                         // Backward Button
                         Button(action: { player.seek(-5); hapticFeedback() }) {
                             Image(systemName: "gobackward.5")
-                                .font(.system(size: 28))
+                                .font(.system(size: 26))
                                 .foregroundColor(Color(hex: "475569"))
                         }
-                        .frame(width: 56, height: 56)
+                        .frame(width: 52, height: 52)
                         .background(Color.white)
-                        .cornerRadius(28)
+                        .cornerRadius(26)
                         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
 
                         // Play/Pause Button
@@ -392,12 +392,23 @@ struct PlayerView: View {
                         // Forward Button
                         Button(action: { player.seek(5); hapticFeedback() }) {
                             Image(systemName: "goforward.5")
-                                .font(.system(size: 28))
+                                .font(.system(size: 26))
                                 .foregroundColor(Color(hex: "475569"))
                         }
-                        .frame(width: 56, height: 56)
+                        .frame(width: 52, height: 52)
                         .background(Color.white)
-                        .cornerRadius(28)
+                        .cornerRadius(26)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+
+                        // Repeat Button
+                        Button(action: { player.repeatEnabled.toggle(); hapticFeedback() }) {
+                            Image(systemName: "repeat")
+                                .font(.system(size: 22))
+                                .foregroundColor(player.repeatEnabled ? .white : Color(hex: "475569"))
+                        }
+                        .frame(width: 48, height: 48)
+                        .background(player.repeatEnabled ? Color(hex: "2563EB") : Color.white)
+                        .cornerRadius(24)
                         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
                     }
                     .padding(.bottom, 30)
@@ -879,6 +890,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     @Published var loopA: Double? = nil
     @Published var loopB: Double? = nil
     @Published var loopEnabled: Bool = true
+    @Published var repeatEnabled: Bool = false
 
     override init() {
         super.init()
@@ -1050,11 +1062,31 @@ class AudioPlayerManager: NSObject, ObservableObject {
             guard let self = self, self.isPlaying else { return }
             DispatchQueue.main.async {
                 self.currentTime = min(self.currentTime + (0.05 * self.speed), self.duration)
+
+                // Check for A-B loop
                 if self.loopEnabled,
                    let a = self.loopA,
                    let b = self.loopB,
                    self.currentTime >= b {
                     self.seekTo(a)
+                    return
+                }
+
+                // Check for track end
+                if self.currentTime >= self.duration {
+                    if self.repeatEnabled {
+                        // Repeat: replay from beginning
+                        self.seekTo(0)
+                        self.playerNode.stop()
+                        self.scheduleFile()
+                        if !self.engine.isRunning { try? self.engine.start() }
+                        self.playerNode.play()
+                    } else {
+                        // No repeat: stop and reset
+                        self.playerNode.stop()
+                        self.isPlaying = false
+                        self.currentTime = 0
+                    }
                 }
             }
         }

@@ -118,14 +118,27 @@ class LibraryManager: ObservableObject {
         load()
     }
 
-    func addTrackFromLocalFile(name: String, duration: Double, localPath: String) {
-        // Check if already exists by name
-        if tracks.contains(where: { $0.name == name }) { return }
+    func addTrackFromLocalFile(name: String, duration: Double, localPath: String, allowDuplicate: Bool = false) {
+        // Check if already exists by name (unless duplicates are allowed)
+        if !allowDuplicate && tracks.contains(where: { $0.name == name }) { return }
 
         let track = LibraryTrack(name: name, duration: duration, filePath: localPath)
         tracks.insert(track, at: 0)
         save()
         print("📋 Track added to library: \(name)")
+    }
+
+    func replaceTrack(name: String, duration: Double, localPath: String) {
+        // Find and remove the existing track with the same name
+        if let index = tracks.firstIndex(where: { $0.name == name }) {
+            tracks.remove(at: index)
+        }
+
+        // Add the new track at the top
+        let track = LibraryTrack(name: name, duration: duration, filePath: localPath)
+        tracks.insert(track, at: 0)
+        save()
+        print("📋 Track replaced in library: \(name)")
     }
 
     func deleteTrack(at offsets: IndexSet) {
@@ -406,6 +419,7 @@ struct LibraryView: View {
     @State private var deleteOffsets: IndexSet?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showRenameAlert = false
+    @State private var showDuplicateAlert = false
     @State private var pendingTrackName = ""
     @State private var pendingTrackData: Data?
     @State private var pendingTrackDuration: Double = 0
@@ -500,6 +514,19 @@ struct LibraryView: View {
                     Text("هل أنت متأكد من الحذف؟")
                 }
             }
+            .alert("اسم مكرر", isPresented: $showDuplicateAlert) {
+                Button("إلغاء", role: .cancel) {
+                    clearPendingTrack()
+                }
+                Button("إضافة كجديد") {
+                    addAsNewTrack()
+                }
+                Button("استبدال") {
+                    replaceExistingTrack()
+                }
+            } message: {
+                Text("يوجد مقطع بنفس الاسم \"\(pendingTrackName)\". ماذا تريد أن تفعل؟")
+            }
         }
     }
 
@@ -538,15 +565,58 @@ struct LibraryView: View {
     func savePendingTrack() {
         guard let data = pendingTrackData else { return }
 
+        // Check if name already exists
+        if library.tracks.contains(where: { $0.name == pendingTrackName }) {
+            showDuplicateAlert = true
+            return
+        }
+
         // Save data to library with the user's chosen name
         let localPath = LibraryFileManager.shared.saveDataToLibrary(data: data, fileName: pendingTrackName)
 
         if let path = localPath {
-            library.addTrackFromLocalFile(name: pendingTrackName, duration: pendingTrackDuration, localPath: path)
+            library.addTrackFromLocalFile(name: pendingTrackName, duration: pendingTrackDuration, localPath: path, allowDuplicate: false)
             hapticFeedback()
         }
 
         // Clear pending state
+        clearPendingTrack()
+    }
+
+    func addAsNewTrack() {
+        guard let data = pendingTrackData else { return }
+
+        // Save data to library with the user's chosen name (allow duplicate)
+        let localPath = LibraryFileManager.shared.saveDataToLibrary(data: data, fileName: pendingTrackName)
+
+        if let path = localPath {
+            library.addTrackFromLocalFile(name: pendingTrackName, duration: pendingTrackDuration, localPath: path, allowDuplicate: true)
+            hapticFeedback()
+        }
+
+        clearPendingTrack()
+    }
+
+    func replaceExistingTrack() {
+        guard let data = pendingTrackData else { return }
+
+        // Find and delete the existing track's file
+        if let existingTrack = library.tracks.first(where: { $0.name == pendingTrackName }) {
+            LibraryFileManager.shared.deleteFile(at: existingTrack.filePath)
+        }
+
+        // Save data to library with the user's chosen name
+        let localPath = LibraryFileManager.shared.saveDataToLibrary(data: data, fileName: pendingTrackName)
+
+        if let path = localPath {
+            library.replaceTrack(name: pendingTrackName, duration: pendingTrackDuration, localPath: path)
+            hapticFeedback()
+        }
+
+        clearPendingTrack()
+    }
+
+    func clearPendingTrack() {
         pendingTrackData = nil
         pendingTrackName = ""
         pendingTrackDuration = 0

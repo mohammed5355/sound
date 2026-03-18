@@ -213,21 +213,21 @@ struct PlayerView: View {
                 VStack(spacing: 0) {
 
                     // MARK: - Header
-                    VStack(spacing: 16) {
-                        Text("المشغل الذكي")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Color(hex: "1e293b"))
+                    if player.fileName.isEmpty {
+                        Text("اختر مقطعاً")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color(hex: "94a3b8"))
                             .padding(.top, 20)
-
-                        if !player.fileName.isEmpty {
-                            Text(player.fileName)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(Color(hex: "64748b"))
-                                .lineLimit(1)
-                        }
+                            .padding(.bottom, 20)
+                    } else {
+                        Text(player.fileName)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color(hex: "1e293b"))
+                            .lineLimit(1)
+                            .padding(.top, 20)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
 
                     ScrollView {
                         VStack(spacing: 16) {

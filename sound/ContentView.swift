@@ -10,7 +10,7 @@ struct LibraryTrack: Identifiable, Codable {
     let name: String
     let duration: Double
     let dateAdded: Date
-    let filePath: String
+    let filePath: String  // Now stores only the file name, not the full path
 
     init(id: UUID = UUID(), name: String, duration: Double, filePath: String) {
         self.id = id
@@ -21,7 +21,8 @@ struct LibraryTrack: Identifiable, Codable {
     }
 
     func getURL() -> URL? {
-        return URL(fileURLWithPath: filePath)
+        // Reconstruct full path at runtime
+        return LibraryFileManager.shared.getURL(for: filePath)
     }
 }
 
@@ -33,7 +34,7 @@ class LibraryFileManager {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
 
-    private var libraryDirectory: URL {
+    var libraryDirectory: URL {
         var libraryDir = documentsDirectory.appendingPathComponent("Library", isDirectory: true)
         if !FileManager.default.fileExists(atPath: libraryDir.path) {
             try? FileManager.default.createDirectory(at: libraryDir, withIntermediateDirectories: true)
@@ -45,13 +46,17 @@ class LibraryFileManager {
         return libraryDir
     }
 
-    func copyToLibrary(url: URL) -> URL? {
-        let fileName = UUID().uuidString + "_" + url.lastPathComponent
-        var destination = libraryDirectory.appendingPathComponent(fileName)
+    func getURL(for fileName: String) -> URL {
+        return libraryDirectory.appendingPathComponent(fileName)
+    }
 
-        // If file already exists at destination, return it
+    func copyToLibrary(url: URL) -> String? {
+        let fileName = UUID().uuidString + "_" + url.lastPathComponent
+        let destination = libraryDirectory.appendingPathComponent(fileName)
+
+        // If file already exists at destination, return the file name
         if FileManager.default.fileExists(atPath: destination.path) {
-            return destination
+            return fileName
         }
 
         do {
@@ -72,24 +77,26 @@ class LibraryFileManager {
             resourceValues.isExcludedFromBackup = true
             try destination.setResourceValues(resourceValues)
 
-            return destination
+            return fileName
         } catch {
             print("Error copying file to library: \(error)")
             return nil
         }
     }
 
-    func deleteFile(at path: String) {
-        try? FileManager.default.removeItem(atPath: path)
+    func deleteFile(at fileName: String) {
+        let fullPath = libraryDirectory.appendingPathComponent(fileName)
+        try? FileManager.default.removeItem(at: fullPath)
     }
 
-    func fileExists(at path: String) -> Bool {
-        return FileManager.default.fileExists(atPath: path)
+    func fileExists(at fileName: String) -> Bool {
+        let fullPath = libraryDirectory.appendingPathComponent(fileName)
+        return FileManager.default.fileExists(atPath: fullPath.path)
     }
 
     func saveDataToLibrary(data: Data, fileName: String) -> String? {
         let uniqueFileName = UUID().uuidString + "_" + fileName
-        var destination = libraryDirectory.appendingPathComponent(uniqueFileName)
+        let destination = libraryDirectory.appendingPathComponent(uniqueFileName)
 
         do {
             try data.write(to: destination)
@@ -99,7 +106,7 @@ class LibraryFileManager {
             resourceValues.isExcludedFromBackup = true
             try destination.setResourceValues(resourceValues)
 
-            return destination.path
+            return uniqueFileName
         } catch {
             print("Error saving data to library: \(error)")
             return nil
@@ -904,17 +911,19 @@ class AudioPlayerManager: NSObject, ObservableObject {
         print("📋 Security scope access: \(hasAccess)")
 
         var localURL: URL
+        var localFileName: String
 
         if saveToLibrary {
             // Copy file to local storage WHILE we have security access
             print("📋 Copying file to local storage...")
-            guard let copiedURL = LibraryFileManager.shared.copyToLibrary(url: url) else {
+            guard let copiedFileName = LibraryFileManager.shared.copyToLibrary(url: url) else {
                 print("📋 ERROR: Failed to copy file to library")
                 if hasAccess { url.stopAccessingSecurityScopedResource() }
                 return
             }
-            print("📋 File copied to: \(copiedURL.path)")
-            localURL = copiedURL
+            print("📋 File copied with name: \(copiedFileName)")
+            localFileName = copiedFileName
+            localURL = LibraryFileManager.shared.getURL(for: copiedFileName)
 
             // Stop accessing security-scoped resource AFTER copy
             if hasAccess {
@@ -922,13 +931,13 @@ class AudioPlayerManager: NSObject, ObservableObject {
                 print("📋 Stopped security scope access")
             }
 
-            // Add to library with local path
-            let fileName = url.lastPathComponent
-            if !library!.tracks.contains(where: { $0.name == fileName }) {
+            // Add to library with file name (not full path)
+            let trackName = url.lastPathComponent
+            if !library!.tracks.contains(where: { $0.name == trackName }) {
                 // Get duration from local file
                 if let audioFile = try? AVAudioFile(forReading: localURL) {
                     let duration = Double(audioFile.length) / audioFile.fileFormat.sampleRate
-                    library?.addTrackFromLocalFile(name: fileName, duration: duration, localPath: localURL.path)
+                    library?.addTrackFromLocalFile(name: trackName, duration: duration, localPath: localFileName)
                 }
             }
         } else {

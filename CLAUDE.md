@@ -1,6 +1,6 @@
 # Sound - Native iOS Audio Player
 
-A SwiftUI audio/video player with speed control, pitch adjustment, and A-B loop functionality.
+A SwiftUI audio player with speed control, pitch adjustment, A-B loop, and library management.
 
 ## Project Structure
 
@@ -8,7 +8,7 @@ A SwiftUI audio/video player with speed control, pitch adjustment, and A-B loop 
 sound/
 ├── sound/
 │   ├── soundApp.swift       # App entry point (@main)
-│   ├── ContentView.swift    # Main UI + AudioPlayerManager
+│   ├── ContentView.swift    # Main UI + AudioPlayerManager + LibraryManager
 │   ├── Info.plist           # App configuration
 │   └── Assets.xcassets/     # App icon and colors
 │
@@ -19,21 +19,22 @@ sound/
 
 | Feature | Description |
 |---------|-------------|
-| **File Selection** | Import audio/video files via system picker |
-| **Playback Controls** | Play/pause, skip forward/backward 3 seconds |
+| **Library** | Import videos from Photos, manage tracks with custom names |
+| **Playback Controls** | Play/pause, skip forward/backward 5 seconds |
 | **Speed Control** | Adjust playback speed (0.5x - 2.0x) |
 | **Pitch Control** | Adjust audio pitch (0.5x - 2.0x) |
 | **A-B Loop** | Set loop start (A) and end (B) points for segment repetition |
-| **Progress Slider** | Custom gradient slider with drag gesture |
+| **Repeat Toggle** | Auto-replay track when finished |
+| **Progress Slider** | Custom slider with drag gesture |
 | **Haptic Feedback** | Tactile feedback on button interactions |
 
 ## Design System
 
-- **Background**: Light gradient (`#f8f9ff` → `#e8eaf6`)
-- **Cards**: White with 20px rounded corners, subtle shadows
-- **Accent**: Indigo-to-cyan gradient (`#6366f1` → `#06b6d4`)
-- **Play Button**: 100px circular gradient with glow shadow
-- **Text**: Dark gray (`#374151`) for labels
+- **Background**: Light color (`#f5f7fa`)
+- **Cards**: White with 16px rounded corners, subtle shadows
+- **Accent**: Blue (`#2563EB`)
+- **Play Button**: 72px circular blue button with glow shadow
+- **Text**: Dark gray (`#1e293b`) for titles, (`#64748b`) for secondary
 
 ## Architecture
 
@@ -45,19 +46,22 @@ sound/
 
 ### Components
 
-| Component | Location | Description |
-|-----------|----------|-------------|
-| `ContentView` | Line 6 | Main UI with gradient background |
-| `ControlCard` | Line 293 | Reusable speed/pitch control card |
-| `LoopButtonModern` | Line 340 | A-B loop point buttons |
-| `AudioPlayerManager` | Line 378 | Audio engine controller |
+| Component | Description |
+|-----------|-------------|
+| `LibraryTrack` | Model for library tracks (stores file name, not full path) |
+| `LibraryFileManager` | Manages file storage in Documents/Library/ |
+| `LibraryManager` | ObservableObject managing track collection |
+| `ContentView` | TabView with Player and Library tabs |
+| `PlayerView` | Player UI with controls |
+| `LibraryView` | Track list with PhotosPicker import |
+| `AudioPlayerManager` | Audio engine controller |
 
 ### AudioPlayerManager
 
 Main audio controller class:
-- **Published properties**: `isPlaying`, `currentTime`, `duration`, `fileName`, `speed`, `pitch`, `loopA`, `loopB`, `showPicker`
+- **Published properties**: `isPlaying`, `currentTime`, `duration`, `fileName`, `speed`, `pitch`, `loopA`, `loopB`, `loopEnabled`, `repeatEnabled`
 - **Key methods**:
-  - `loadFile(url:)` - Load and prepare audio file
+  - `loadFile(url:library:saveToLibrary:customName:)` - Load and prepare audio file
   - `togglePlay()` - Play/pause toggle
   - `seekTo(_:)` / `seek(_:)` - Position seeking
   - `applySpeed()` - Set `pitchControl.rate`
@@ -78,21 +82,35 @@ pitchControl.pitch = Float(log2(pitch) * 1200)  // Cents conversion
 ### A-B Loop
 Timer-based (50ms interval) position checking:
 ```swift
-if let a = loopA, let b = loopB, currentTime >= b {
+if loopEnabled, let a = loopA, let b = loopB, currentTime >= b {
     seekTo(a)
 }
 ```
 
-### File Import
+### Track End Handling
 ```swift
-.fileImporter(isPresented: $player.showPicker,
-              allowedContentTypes: [UTType.audio, UTType.movie])
+if currentTime >= duration {
+    if repeatEnabled {
+        seekTo(0); playerNode.play()  // Replay
+    } else {
+        isPlaying = false; currentTime = 0  // Stop
+    }
+}
+```
+
+### Library Persistence
+Tracks stored in UserDefaults with file names (not full paths) to handle iOS app container path changes:
+```swift
+func getURL() -> URL? {
+    return LibraryFileManager.shared.getURL(for: filePath)
+}
 ```
 
 ## UI Notes
 
 - **Language**: Arabic with RTL layout direction
-- **Navigation**: Hidden navigation bar, gradient background fills safe area
+- **Navigation**: Hidden navigation bar
+- **Tabs**: Player ("المشغل") and Library ("المكتبة")
 
 ## Building
 
@@ -106,4 +124,4 @@ open sound.xcodeproj
 - **SwiftUI** - UI framework
 - **AVFoundation** - Audio engine
 - **Combine** - State management
-- **UniformTypeIdentifiers** - File type filtering
+- **PhotosUI** - Photo picker for importing videos

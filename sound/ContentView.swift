@@ -1,7 +1,6 @@
 import SwiftUI
 import Combine
 import AVFoundation
-import UniformTypeIdentifiers
 import PhotosUI
 
 // MARK: - Library Track Model
@@ -79,7 +78,6 @@ class LibraryFileManager {
 
             return fileName
         } catch {
-            print("Error copying file to library: \(error)")
             return nil
         }
     }
@@ -108,7 +106,6 @@ class LibraryFileManager {
 
             return uniqueFileName
         } catch {
-            print("Error saving data to library: \(error)")
             return nil
         }
     }
@@ -132,7 +129,6 @@ class LibraryManager: ObservableObject {
         let track = LibraryTrack(name: name, duration: duration, filePath: localPath)
         tracks.insert(track, at: 0)
         save()
-        print("📋 Track added to library: \(name)")
     }
 
     func replaceTrack(name: String, duration: Double, localPath: String) {
@@ -145,7 +141,6 @@ class LibraryManager: ObservableObject {
         let track = LibraryTrack(name: name, duration: duration, filePath: localPath)
         tracks.insert(track, at: 0)
         save()
-        print("📋 Track replaced in library: \(name)")
     }
 
     func deleteTrack(at offsets: IndexSet) {
@@ -575,7 +570,6 @@ struct LibraryView: View {
                     }
                 }
             } catch {
-                print("Error loading media: \(error)")
             }
         }
     }
@@ -886,7 +880,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
     @Published var fileName = ""
     @Published var speed: Double = 1.0
     @Published var pitch: Double = 1.0
-    @Published var showPicker = false
     @Published var loopA: Double? = nil
     @Published var loopB: Double? = nil
     @Published var loopEnabled: Bool = true
@@ -904,7 +897,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default)
             try session.setActive(true)
-        } catch { print("Audio Session Error: \(error)") }
+        } catch { }
         #endif
     }
 
@@ -916,31 +909,24 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
 
     func loadFile(url: URL, library: LibraryManager? = nil, saveToLibrary: Bool = true, customName: String? = nil) {
-        print("📋 loadFile called with URL: \(url.path)")
-
         // Start accessing security-scoped resource FIRST
         let hasAccess = url.startAccessingSecurityScopedResource()
-        print("📋 Security scope access: \(hasAccess)")
 
         var localURL: URL
         var localFileName: String
 
         if saveToLibrary {
             // Copy file to local storage WHILE we have security access
-            print("📋 Copying file to local storage...")
             guard let copiedFileName = LibraryFileManager.shared.copyToLibrary(url: url) else {
-                print("📋 ERROR: Failed to copy file to library")
                 if hasAccess { url.stopAccessingSecurityScopedResource() }
                 return
             }
-            print("📋 File copied with name: \(copiedFileName)")
             localFileName = copiedFileName
             localURL = LibraryFileManager.shared.getURL(for: copiedFileName)
 
             // Stop accessing security-scoped resource AFTER copy
             if hasAccess {
                 url.stopAccessingSecurityScopedResource()
-                print("📋 Stopped security scope access")
             }
 
             // Add to library with file name (not full path)
@@ -959,25 +945,15 @@ class AudioPlayerManager: NSObject, ObservableObject {
 
         // Check if file is readable
         let isReadable = FileManager.default.isReadableFile(atPath: localURL.path)
-        print("📋 File readable: \(isReadable)")
 
         if !isReadable {
             // Fix file permissions
-            print("📋 Fixing file permissions...")
             do {
                 try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: localURL.path)
-                print("📋 Permissions fixed to 0o644")
-            } catch {
-                print("📋 ERROR fixing permissions: \(error)")
-            }
+            } catch { }
         }
 
-        // Verify again after permission fix
-        let nowReadable = FileManager.default.isReadableFile(atPath: localURL.path)
-        print("📋 File readable after fix: \(nowReadable)")
-
         // Now load the LOCAL file with AVAudioFile
-        print("📋 Loading local file: \(localURL.path)")
         do {
             playerNode.stop()
             audioFile = try AVAudioFile(forReading: localURL)
@@ -993,10 +969,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
             if !engine.isRunning { try? engine.start() }
             playerNode.play()
             isPlaying = true
-            print("📋 SUCCESS: File loaded, duration: \(duration)s")
-        } catch {
-            print("📋 ERROR loading audio file: \(error)")
-        }
+        } catch { }
     }
 
     private func scheduleFile() {

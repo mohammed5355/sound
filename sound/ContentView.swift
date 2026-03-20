@@ -201,34 +201,28 @@ struct PlayerView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Dark gradient background
-                LinearGradient(
-                    gradient: Gradient(colors: [Color(hex: "1a1a2e"), Color(hex: "16213e"), Color(hex: "0f0f23")]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Light background
+                Color(hex: "f5f7fa")
+                    .ignoresSafeArea()
 
                 VStack(spacing: 0) {
 
-                    // MARK: - Header with Waveform
-                    VStack(spacing: 16) {
-                        if player.fileName.isEmpty {
-                            Text("اختر مقطعاً")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(Color(hex: "6b7280"))
-                        } else {
-                            Text(player.fileName)
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                        }
-
-                        // Waveform Visualization
-                        WaveformView(isPlaying: player.isPlaying)
+                    // MARK: - Header
+                    if player.fileName.isEmpty {
+                        Text("اختر مقطعاً")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color(hex: "94a3b8"))
+                            .padding(.top, 20)
+                            .padding(.bottom, 20)
+                    } else {
+                        Text(player.fileName)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color(hex: "1e293b"))
+                            .lineLimit(1)
+                            .padding(.top, 20)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
                     }
-                    .padding(.top, 40)
-                    .padding(.bottom, 20)
 
                     ScrollView {
                         VStack(spacing: 16) {
@@ -239,34 +233,34 @@ struct PlayerView: View {
                                 HStack {
                                     Text(player.formatTime(player.currentTime))
                                         .font(.system(.subheadline, design: .monospaced))
-                                        .foregroundColor(Color(hex: "9ca3af"))
+                                        .foregroundColor(Color(hex: "475569"))
                                     Spacer()
                                     Text(player.formatTime(player.duration))
                                         .font(.system(.subheadline, design: .monospaced))
-                                        .foregroundColor(Color(hex: "9ca3af"))
+                                        .foregroundColor(Color(hex: "475569"))
                                 }
 
                                 // Progress Slider
-                                DarkProgressSlider(
+                                ProgressSlider(
                                     value: $player.currentTime,
                                     duration: player.duration,
                                     onSeek: { player.seekTo($0) }
                                 )
                             }
                             .padding(20)
-                            .background(Color(hex: "1e1e30"))
+                            .background(Color.white)
                             .cornerRadius(16)
 
                             // MARK: - A-B Loop Section
                             VStack(spacing: 16) {
                                 Text("تكرار المقطع (A-B)")
                                     .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color(hex: "334155"))
                                     .frame(maxWidth: .infinity, alignment: .leading)
 
                                 HStack(spacing: 12) {
                                     // Loop A Button
-                                    DarkLoopPointButton(
+                                    LoopPointButton(
                                         label: "A",
                                         time: player.loopA,
                                         isActive: player.loopA != nil,
@@ -286,20 +280,20 @@ struct PlayerView: View {
                                         }) {
                                             Image(systemName: player.loopEnabled ? "repeat.1" : "repeat")
                                                 .font(.system(size: 22, weight: .medium))
-                                                .foregroundColor(player.loopA != nil && player.loopB != nil ? Color(hex: "3b82f6") : Color(hex: "4b5563"))
+                                                .foregroundColor(player.loopA != nil && player.loopB != nil ? Color(hex: "2563EB") : Color(hex: "cbd5e1"))
                                                 .frame(width: 50, height: 50)
                                                 .background(
                                                     Circle()
-                                                        .fill(player.loopEnabled ? Color(hex: "3b82f6").opacity(0.2) : Color(hex: "2d2d44"))
+                                                        .fill(player.loopEnabled ? Color(hex: "2563EB").opacity(0.1) : Color(hex: "f1f5f9"))
                                                 )
                                         }
                                         Text(player.loopEnabled ? "تفعيل" : "إيقاف")
                                             .font(.system(size: 10, weight: .medium))
-                                            .foregroundColor(Color(hex: "6b7280"))
+                                            .foregroundColor(Color(hex: "94a3b8"))
                                     }
 
                                     // Loop B Button
-                                    DarkLoopPointButton(
+                                    LoopPointButton(
                                         label: "B",
                                         time: player.loopB,
                                         isActive: player.loopB != nil,
@@ -316,40 +310,40 @@ struct PlayerView: View {
                                     }) {
                                         Image(systemName: "xmark")
                                             .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(Color(hex: "6b7280"))
+                                            .foregroundColor(Color(hex: "94a3b8"))
                                             .frame(width: 36, height: 36)
-                                            .background(Color(hex: "2d2d44"))
+                                            .background(Color(hex: "f1f5f9"))
                                             .cornerRadius(10)
                                     }
                                 }
                             }
                             .padding(20)
-                            .background(Color(hex: "1e1e30"))
+                            .background(Color.white)
                             .cornerRadius(16)
 
                             // MARK: - Speed Control
-                            DarkControlRow(
+                            ControlRow(
                                 icon: "speedometer",
                                 title: "السرعة",
                                 value: player.speed,
-                                format: { String(format: "%.1fx", $0) },
-                                color: Color(hex: "3b82f6"),
-                                onDecrease: { player.speed = max(0.5, player.speed - 0.1); player.applySpeed() },
-                                onIncrease: { player.speed = min(2.0, player.speed + 0.1); player.applySpeed() },
+                                format: { String(format: "%.2fx", $0) },
+                                color: Color(hex: "2563EB"),
+                                onDecrease: { player.speed = max(0.5, player.speed - 0.01); player.applySpeed() },
+                                onIncrease: { player.speed = min(2.0, player.speed + 0.01); player.applySpeed() },
                                 onReset: { player.speed = 1.0; player.applySpeed() },
                                 sliderBinding: $player.speed,
                                 onSliderChange: { player.applySpeed() }
                             )
 
                             // MARK: - Pitch Control
-                            DarkControlRow(
+                            ControlRow(
                                 icon: "waveform.path",
                                 title: "الطبقة",
                                 value: player.pitch,
-                                format: { String(format: "%.1fx", $0) },
-                                color: Color(hex: "a855f7"),
-                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.1); player.applyPitch() },
-                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.1); player.applyPitch() },
+                                format: { String(format: "%.2fx", $0) },
+                                color: Color(hex: "7c3aed"),
+                                onDecrease: { player.pitch = max(0.5, player.pitch - 0.01); player.applyPitch() },
+                                onIncrease: { player.pitch = min(2.0, player.pitch + 0.01); player.applyPitch() },
                                 onReset: { player.pitch = 1.0; player.applyPitch() },
                                 sliderBinding: $player.pitch,
                                 onSliderChange: { player.applyPitch() }
@@ -366,16 +360,17 @@ struct PlayerView: View {
                 // MARK: - Bottom Playback Controls
                 VStack {
                     Spacer()
-                    HStack(spacing: 20) {
+                    HStack(spacing: 24) {
                         // Backward Button
                         Button(action: { player.seek(-5); hapticFeedback() }) {
                             Image(systemName: "gobackward.5")
-                                .font(.system(size: 24))
-                                .foregroundColor(.white)
+                                .font(.system(size: 26))
+                                .foregroundColor(Color(hex: "475569"))
                         }
-                        .frame(width: 50, height: 50)
-                        .background(Color(hex: "2d2d44"))
-                        .cornerRadius(25)
+                        .frame(width: 52, height: 52)
+                        .background(Color.white)
+                        .cornerRadius(26)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
 
                         // Play/Pause Button
                         Button(action: { player.togglePlay(); hapticFeedback() }) {
@@ -384,30 +379,32 @@ struct PlayerView: View {
                                 .foregroundColor(.white)
                                 .offset(x: player.isPlaying ? 0 : 3)
                         }
-                        .frame(width: 70, height: 70)
-                        .background(Color(hex: "3b82f6"))
-                        .cornerRadius(35)
-                        .shadow(color: Color(hex: "3b82f6").opacity(0.4), radius: 12, x: 0, y: 6)
+                        .frame(width: 72, height: 72)
+                        .background(Color(hex: "2563EB"))
+                        .cornerRadius(36)
+                        .shadow(color: Color(hex: "2563EB").opacity(0.3), radius: 12, x: 0, y: 6)
 
                         // Forward Button
                         Button(action: { player.seek(5); hapticFeedback() }) {
                             Image(systemName: "goforward.5")
-                                .font(.system(size: 24))
-                                .foregroundColor(.white)
+                                .font(.system(size: 26))
+                                .foregroundColor(Color(hex: "475569"))
                         }
-                        .frame(width: 50, height: 50)
-                        .background(Color(hex: "2d2d44"))
-                        .cornerRadius(25)
+                        .frame(width: 52, height: 52)
+                        .background(Color.white)
+                        .cornerRadius(26)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
 
                         // Repeat Button
                         Button(action: { player.repeatEnabled.toggle(); hapticFeedback() }) {
                             Image(systemName: "repeat")
-                                .font(.system(size: 20))
-                                .foregroundColor(player.repeatEnabled ? .white : Color(hex: "9ca3af"))
+                                .font(.system(size: 22))
+                                .foregroundColor(player.repeatEnabled ? .white : Color(hex: "475569"))
                         }
-                        .frame(width: 44, height: 44)
-                        .background(player.repeatEnabled ? Color(hex: "3b82f6") : Color(hex: "2d2d44"))
-                        .cornerRadius(22)
+                        .frame(width: 48, height: 48)
+                        .background(player.repeatEnabled ? Color(hex: "2563EB") : Color.white)
+                        .cornerRadius(24)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
                     }
                     .padding(.bottom, 30)
                 }
@@ -422,183 +419,6 @@ struct PlayerView: View {
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
-    }
-}
-
-// MARK: - Waveform View
-struct WaveformView: View {
-    let isPlaying: Bool
-    @State private var animationAmount: CGFloat = 1.0
-
-    var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<30, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color(hex: "3b82f6"), Color(hex: "8b5cf6")]),
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                    )
-                    .frame(width: 3, height: isPlaying ? CGFloat.random(in: 20...50) : 20)
-                    .animation(
-                        isPlaying ? Animation.easeInOut(duration: Double.random(in: 0.3...0.8)).repeatForever() : .default,
-                        value: isPlaying
-                    )
-            }
-        }
-        .frame(height: 60)
-        .padding(.horizontal, 20)
-    }
-}
-
-// MARK: - Dark Progress Slider
-struct DarkProgressSlider: View {
-    @Binding var value: Double
-    let duration: Double
-    let onSeek: (Double) -> Void
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                // Track
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(hex: "374151"))
-                    .frame(height: 6)
-
-                // Progress
-                let progress = duration > 0 ? max(0, min(1, value / duration)) : 0
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color(hex: "3b82f6"), Color(hex: "8b5cf6")]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: max(0, geometry.size.width * CGFloat(progress)), height: 6)
-
-                // Thumb
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 16, height: 16)
-                    .shadow(color: Color(hex: "3b82f6").opacity(0.5), radius: 4, x: 0, y: 0)
-                    .offset(x: geometry.size.width * CGFloat(progress) - 8)
-            }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { drag in
-                        let newValue = Double(drag.location.x / geometry.size.width) * duration
-                        value = max(0, min(newValue, duration))
-                    }
-                    .onEnded { drag in
-                        let newValue = Double(drag.location.x / geometry.size.width) * duration
-                        onSeek(max(0, min(newValue, duration)))
-                    }
-            )
-        }
-        .frame(height: 24)
-        .environment(\.layoutDirection, .leftToRight)
-        .scaleEffect(x: -1)
-    }
-}
-
-// MARK: - Dark Control Row
-struct DarkControlRow: View {
-    let icon: String
-    let title: String
-    let value: Double
-    let format: (Double) -> String
-    let color: Color
-    let onDecrease: () -> Void
-    let onIncrease: () -> Void
-    let onReset: () -> Void
-    @Binding var sliderBinding: Double
-    let onSliderChange: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundColor(color)
-                Text(title)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(Color(hex: "d1d5db"))
-                Button(action: { onReset(); haptic() }) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(hex: "6b7280"))
-                }
-                Spacer()
-                Text(format(value))
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
-                    .foregroundColor(color)
-            }
-
-            HStack(spacing: 12) {
-                Button(action: { onDecrease(); haptic() }) {
-                    Image(systemName: "minus")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(color)
-                        .frame(width: 32, height: 32)
-                        .background(color.opacity(0.2))
-                        .cornerRadius(8)
-                }
-
-                Slider(value: $sliderBinding, in: 0.5...2.0, step: 0.1)
-                    .accentColor(color)
-                    .onChange(of: sliderBinding) { _, _ in onSliderChange() }
-
-                Button(action: { onIncrease(); haptic() }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(color)
-                        .frame(width: 32, height: 32)
-                        .background(color.opacity(0.2))
-                        .cornerRadius(8)
-                }
-            }
-        }
-        .padding(16)
-        .background(Color(hex: "1e1e30"))
-        .cornerRadius(16)
-    }
-
-    func haptic() {
-        #if os(iOS)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        #endif
-    }
-}
-
-// MARK: - Dark Loop Point Button
-struct DarkLoopPointButton: View {
-    let label: String
-    let time: Double?
-    let isActive: Bool
-    let format: (Double) -> String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                Text(label)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(isActive ? .white : Color(hex: "3b82f6"))
-                Text(time != nil ? format(time!) : "--:--.-")
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.medium)
-                    .foregroundColor(isActive ? .white : Color(hex: "9ca3af"))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(isActive ? Color(hex: "3b82f6") : Color(hex: "2d2d44"))
-            .cornerRadius(12)
-        }
     }
 }
 
